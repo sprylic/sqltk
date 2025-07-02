@@ -11,6 +11,7 @@ type UpdateBuilder struct {
 	sets    []string
 	setArgs []interface{}
 	whereClause
+	dialect Dialect // per-builder dialect, if set
 }
 
 // Update creates a new UpdateBuilder for the given table.
@@ -65,6 +66,12 @@ func (b *UpdateBuilder) WhereNotEqual(column string, value interface{}) *UpdateB
 	return b
 }
 
+// WithDialect sets the dialect for this builder instance.
+func (b *UpdateBuilder) WithDialect(d Dialect) *UpdateBuilder {
+	b.dialect = d
+	return b
+}
+
 // Build builds the SQL UPDATE query and returns the query string, arguments, and error if any.
 func (b *UpdateBuilder) Build() (string, []interface{}, error) {
 	if b.tableClauseString.err != nil {
@@ -80,7 +87,10 @@ func (b *UpdateBuilder) Build() (string, []interface{}, error) {
 		return "", nil, errors.New("Update: at least one SET clause must be set")
 	}
 
-	dialect := getDialect()
+	dialect := b.dialect
+	if dialect == nil {
+		dialect = getDialect()
+	}
 	placeholderIdx := 1
 
 	var sb strings.Builder

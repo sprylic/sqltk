@@ -21,7 +21,6 @@ func TestPostgresIntegration(t *testing.T) {
 		t.Skipf("skipping: failed to connect to postgres: %v", err)
 	}
 	defer db.Close()
-	SetDialect(Postgres())
 
 	_, _ = db.Exec(`DROP TABLE IF EXISTS users`)
 	_, err = db.Exec(`CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT, age INT)`)
@@ -30,7 +29,7 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 
 	// Insert
-	q := Insert("users").Columns("name", "age").Values("Alice", 30).Values("Bob", 25)
+	q := Insert("users").Columns("name", "age").Values("Alice", 30).Values("Bob", 25).WithDialect(PostgreSQL())
 	sqlStr, args, err := q.Build()
 	if err != nil {
 		t.Fatalf("insert build: %v", err)
@@ -41,7 +40,7 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 
 	// Select
-	q2 := Select("id", "name", "age").From("users").Where("age > ?", 20)
+	q2 := Select("id", "name", "age").From("users").Where("age > ?", 20).WithDialect(PostgreSQL())
 	sqlStr, args, err = q2.Build()
 	if err != nil {
 		t.Fatalf("select build: %v", err)
@@ -65,7 +64,7 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 
 	// Update
-	q3 := Update("users").Set("age", 31).Where("name = ?", "Alice")
+	q3 := Update("users").Set("age", 31).Where("name = ?", "Alice").WithDialect(PostgreSQL())
 	sqlStr, args, err = q3.Build()
 	if err != nil {
 		t.Fatalf("update build: %v", err)
@@ -76,7 +75,7 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 
 	// Delete
-	q4 := Delete("users").Where("name = ?", "Bob")
+	q4 := Delete("users").Where("name = ?", "Bob").WithDialect(PostgreSQL())
 	sqlStr, args, err = q4.Build()
 	if err != nil {
 		t.Fatalf("delete build: %v", err)
@@ -106,7 +105,7 @@ func TestMySQLIntegration(t *testing.T) {
 	}
 
 	// Insert
-	q := Insert("users").Columns("name", "age").Values("Alice", 30).Values("Bob", 25)
+	q := Insert("users").Columns("name", "age").Values("Alice", 30).Values("Bob", 25).WithDialect(MySQL())
 	sqlStr, args, err := q.Build()
 	if err != nil {
 		t.Fatalf("insert build: %v", err)
@@ -117,7 +116,7 @@ func TestMySQLIntegration(t *testing.T) {
 	}
 
 	// Select
-	q2 := Select("id", "name", "age").From("users").Where("age > ?", 20)
+	q2 := Select("id", "name", "age").From("users").Where("age > ?", 20).WithDialect(MySQL())
 	sqlStr, args, err = q2.Build()
 	if err != nil {
 		t.Fatalf("select build: %v", err)
@@ -141,7 +140,7 @@ func TestMySQLIntegration(t *testing.T) {
 	}
 
 	// Update
-	q3 := Update("users").Set("age", 31).Where("name = ?", "Alice")
+	q3 := Update("users").Set("age", 31).Where("name = ?", "Alice").WithDialect(MySQL())
 	sqlStr, args, err = q3.Build()
 	if err != nil {
 		t.Fatalf("update build: %v", err)
@@ -152,7 +151,7 @@ func TestMySQLIntegration(t *testing.T) {
 	}
 
 	// Delete
-	q4 := Delete("users").Where("name = ?", "Bob")
+	q4 := Delete("users").Where("name = ?", "Bob").WithDialect(MySQL())
 	sqlStr, args, err = q4.Build()
 	if err != nil {
 		t.Fatalf("delete build: %v", err)

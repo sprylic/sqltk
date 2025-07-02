@@ -11,6 +11,7 @@ type InsertBuilder struct {
 	columns []string
 	values  [][]interface{}
 	err     error
+	dialect Dialect // per-builder dialect, if set
 }
 
 // Insert creates a new InsertBuilder for the given table.
@@ -40,6 +41,12 @@ func (b *InsertBuilder) Values(vals ...interface{}) *InsertBuilder {
 	return b
 }
 
+// WithDialect sets the dialect for this builder instance.
+func (b *InsertBuilder) WithDialect(d Dialect) *InsertBuilder {
+	b.dialect = d
+	return b
+}
+
 // Build builds the SQL INSERT query and returns the query string, arguments, and error if any.
 func (b *InsertBuilder) Build() (string, []interface{}, error) {
 	if b.err != nil {
@@ -55,7 +62,10 @@ func (b *InsertBuilder) Build() (string, []interface{}, error) {
 		return "", nil, errors.New("Insert: at least one row of values must be set")
 	}
 
-	dialect := getDialect()
+	dialect := b.dialect
+	if dialect == nil {
+		dialect = getDialect()
+	}
 	placeholderIdx := 1
 
 	var sb strings.Builder

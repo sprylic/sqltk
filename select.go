@@ -26,6 +26,7 @@ type SelectBuilder struct {
 	limit       int
 	offsetSet   bool
 	offset      int
+	dialect     Dialect // per-builder dialect, if set
 }
 
 // Distinct sets the DISTINCT flag for the SELECT query.
@@ -178,6 +179,12 @@ func Alias(expr interface{}, alias string) AliasExpr {
 	return AliasExpr{Expr: expr, Alias: alias}
 }
 
+// WithDialect sets the dialect for this builder instance.
+func (b *SelectBuilder) WithDialect(d Dialect) *SelectBuilder {
+	b.dialect = d
+	return b
+}
+
 // Build builds the SQL query and returns the query string, arguments, and error if any invalid type is encountered.
 func (b *SelectBuilder) Build() (string, []interface{}, error) {
 	if b.tableClauseInterface.err != nil {
@@ -190,7 +197,10 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 	var err error
 	args := []interface{}{}
 
-	dialect := getDialect()
+	dialect := b.dialect
+	if dialect == nil {
+		dialect = getDialect()
+	}
 	placeholderIdx := 1
 
 	sb.WriteString("SELECT ")

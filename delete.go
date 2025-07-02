@@ -9,6 +9,7 @@ import (
 type DeleteBuilder struct {
 	tableClauseString
 	whereClause
+	dialect Dialect // per-builder dialect, if set
 }
 
 // Delete creates a new DeleteBuilder for the given table.
@@ -36,6 +37,12 @@ func (b *DeleteBuilder) WhereNotEqual(column string, value interface{}) *DeleteB
 	return b
 }
 
+// WithDialect sets the dialect for this builder instance.
+func (b *DeleteBuilder) WithDialect(d Dialect) *DeleteBuilder {
+	b.dialect = d
+	return b
+}
+
 // Build builds the SQL DELETE query and returns the query string, arguments, and error if any.
 func (b *DeleteBuilder) Build() (string, []interface{}, error) {
 	if b.tableClauseString.err != nil {
@@ -48,7 +55,10 @@ func (b *DeleteBuilder) Build() (string, []interface{}, error) {
 		return "", nil, errors.New("Delete: table must be set")
 	}
 
-	dialect := getDialect()
+	dialect := b.dialect
+	if dialect == nil {
+		dialect = getDialect()
+	}
 	placeholderIdx := 1
 
 	var sb strings.Builder

@@ -602,12 +602,8 @@ func TestSelectBuilder_Compose(t *testing.T) {
 }
 
 func TestSelectBuilder_Dialect(t *testing.T) {
-	reset := func() { SetDialect(Standard()) }
-	defer reset()
-
 	t.Run("standard dialect", func(t *testing.T) {
-		reset()
-		q := Select("id", "name").From("users").Where("id = ? AND name = ?", 1, "bob")
+		q := Select("id", "name").From("users").Where("id = ? AND name = ?", 1, "bob").WithDialect(Standard())
 		sql, _, err := q.Build()
 		wantSQL := "SELECT id, name FROM users WHERE id = ? AND name = ?"
 		if err != nil {
@@ -619,8 +615,7 @@ func TestSelectBuilder_Dialect(t *testing.T) {
 	})
 
 	t.Run("mysql dialect", func(t *testing.T) {
-		SetDialect(MySQL())
-		q := Select("id", "name").From("users").Where("id = ? AND name = ?", 1, "bob")
+		q := Select("id", "name").From("users").Where("id = ? AND name = ?", 1, "bob").WithDialect(MySQL())
 		sql, _, err := q.Build()
 		wantSQL := "SELECT `id`, `name` FROM `users` WHERE id = ? AND name = ?"
 		if err != nil {
@@ -629,12 +624,10 @@ func TestSelectBuilder_Dialect(t *testing.T) {
 		if sql != wantSQL {
 			t.Errorf("got SQL %q, want %q", sql, wantSQL)
 		}
-		reset()
 	})
 
 	t.Run("postgres dialect", func(t *testing.T) {
-		SetDialect(Postgres())
-		q := Select("id", "name").From("users").Where("id = ? AND name = ?", 1, "bob")
+		q := Select("id", "name").From("users").Where("id = ? AND name = ?", 1, "bob").WithDialect(Postgres())
 		sql, _, err := q.Build()
 		wantSQL := "SELECT \"id\", \"name\" FROM \"users\" WHERE id = $1 AND name = $2"
 		if err != nil {
@@ -643,7 +636,6 @@ func TestSelectBuilder_Dialect(t *testing.T) {
 		if sql != wantSQL {
 			t.Errorf("got SQL %q, want %q", sql, wantSQL)
 		}
-		reset()
 	})
 }
 
