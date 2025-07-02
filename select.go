@@ -8,32 +8,88 @@ import (
 // Raw marks a string as raw SQL to be included directly in the query.
 type Raw string
 
+// whereClause holds shared WHERE clause logic for builders.
+type whereClause struct {
+	whereParam []string
+	whereRaw   []string
+	whereArgs  []interface{}
+	err        error
+}
+
+func (w *whereClause) Where(cond interface{}, args ...interface{}) {
+	if w.err != nil {
+		return
+	}
+	switch c := cond.(type) {
+	case Raw:
+		w.whereRaw = append(w.whereRaw, string(c))
+	case string:
+		w.whereParam = append(w.whereParam, c)
+		w.whereArgs = append(w.whereArgs, args...)
+	default:
+		w.err = errors.New("Where: cond must be string or sq.Raw")
+	}
+}
+
+func (w *whereClause) WhereEqual(column string, value interface{}) {
+	w.Where(column+" = ?", value)
+}
+
+func (w *whereClause) WhereNotEqual(column string, value interface{}) {
+	w.Where(column+" != ?", value)
+}
+
+func (w *whereClause) buildWhereSQL(dialect Dialect, placeholderIdx *int) (string, []interface{}) {
+	var wheres []string
+	if len(w.whereParam) > 0 {
+		wheres = append(wheres, w.whereParam...)
+	}
+	if len(w.whereRaw) > 0 {
+		wheres = append(wheres, w.whereRaw...)
+	}
+	if len(wheres) == 0 {
+		return "", nil
+	}
+	whereSQL := strings.Join(wheres, " AND ")
+	for strings.Contains(whereSQL, "?") && dialect.Placeholder(0) != "?" {
+		whereSQL = strings.Replace(whereSQL, "?", dialect.Placeholder(*placeholderIdx), 1)
+		(*placeholderIdx)++
+	}
+	return whereSQL, w.whereArgs
+}
+
+// tableClauseInterface holds shared table and error logic for builders with interface{} table names.
+type tableClauseInterface struct {
+	table interface{}
+	err   error
+}
+
+func (t *tableClauseInterface) SetTable(table interface{}) {
+	if table == nil || table == "" {
+		t.err = errors.New("table must be set")
+	} else {
+		t.table = table
+	}
+}
+
 // SelectBuilder builds SQL SELECT queries.
 type SelectBuilder struct {
+	tableClauseInterface
 	distinct    bool
 	columns     []interface{} // string, Raw, or *SelectBuilder
-	table       interface{}   // string, Raw, or *SelectBuilder
 	joinClauses []string
-	whereParam  []string
-	whereRaw    []string
-	args        []interface{}
-
-	groupBy    []string
-	groupByRaw []string
-
+	whereClause
+	groupBy     []string
+	groupByRaw  []string
 	havingParam []string
 	havingRaw   []string
 	havingArgs  []interface{}
-
-	orderBy    []string
-	orderByRaw []string
-
-	limitSet  bool
-	limit     int
-	offsetSet bool
-	offset    int
-
-	err error // internal error state
+	orderBy     []string
+	orderByRaw  []string
+	limitSet    bool
+	limit       int
+	offsetSet   bool
+	offset      int
 }
 
 // Distinct sets the DISTINCT flag for the SELECT query.
@@ -55,40 +111,31 @@ func (b *SelectBuilder) AddField(fields ...interface{}) *SelectBuilder {
 
 // From sets the table for the SELECT query. Accepts string, Raw, or *SelectBuilder (for subqueries).
 func (b *SelectBuilder) From(table interface{}) *SelectBuilder {
-	b.table = table
+	b.SetTable(table)
 	return b
 }
 
 // Where adds a WHERE clause to the query. Accepts either a condition string (with optional args) or a Raw type.
 func (b *SelectBuilder) Where(cond interface{}, args ...interface{}) *SelectBuilder {
-	if b.err != nil {
-		return b
-	}
-	switch c := cond.(type) {
-	case Raw:
-		b.whereRaw = append(b.whereRaw, string(c))
-	case string:
-		b.whereParam = append(b.whereParam, c)
-		b.args = append(b.args, args...)
-	default:
-		b.err = errors.New("Where: cond must be string or sq.Raw")
-	}
+	b.whereClause.Where(cond, args...)
 	return b
 }
 
 // WhereEqual adds a WHERE clause for equality (column = value).
 func (b *SelectBuilder) WhereEqual(column string, value interface{}) *SelectBuilder {
-	return b.Where(column+" = ?", value)
+	b.whereClause.WhereEqual(column, value)
+	return b
 }
 
 // WhereNotEqual adds a WHERE clause for inequality (column != value).
 func (b *SelectBuilder) WhereNotEqual(column string, value interface{}) *SelectBuilder {
-	return b.Where(column+" != ?", value)
+	b.whereClause.WhereNotEqual(column, value)
+	return b
 }
 
 // GroupBy adds a GROUP BY clause. Accepts either a column string or Raw.
 func (b *SelectBuilder) GroupBy(expr interface{}) *SelectBuilder {
-	if b.err != nil {
+	if b.whereClause.err != nil || b.tableClauseInterface.err != nil {
 		return b
 	}
 	switch c := expr.(type) {
@@ -97,14 +144,14 @@ func (b *SelectBuilder) GroupBy(expr interface{}) *SelectBuilder {
 	case string:
 		b.groupBy = append(b.groupBy, c)
 	default:
-		b.err = errors.New("GroupBy: expr must be string or sq.Raw")
+		b.whereClause.err = errors.New("GroupBy: expr must be string or sq.Raw")
 	}
 	return b
 }
 
 // Having adds a HAVING clause. Accepts either a condition string (with optional args) or Raw.
 func (b *SelectBuilder) Having(cond interface{}, args ...interface{}) *SelectBuilder {
-	if b.err != nil {
+	if b.whereClause.err != nil || b.tableClauseInterface.err != nil {
 		return b
 	}
 	switch c := cond.(type) {
@@ -114,14 +161,14 @@ func (b *SelectBuilder) Having(cond interface{}, args ...interface{}) *SelectBui
 		b.havingParam = append(b.havingParam, c)
 		b.havingArgs = append(b.havingArgs, args...)
 	default:
-		b.err = errors.New("Having: cond must be string or sq.Raw")
+		b.whereClause.err = errors.New("Having: cond must be string or sq.Raw")
 	}
 	return b
 }
 
 // OrderBy adds an ORDER BY clause. Accepts either a column string or Raw.
 func (b *SelectBuilder) OrderBy(expr interface{}) *SelectBuilder {
-	if b.err != nil {
+	if b.whereClause.err != nil || b.tableClauseInterface.err != nil {
 		return b
 	}
 	switch c := expr.(type) {
@@ -130,7 +177,7 @@ func (b *SelectBuilder) OrderBy(expr interface{}) *SelectBuilder {
 	case string:
 		b.orderBy = append(b.orderBy, c)
 	default:
-		b.err = errors.New("OrderBy: expr must be string or sq.Raw")
+		b.whereClause.err = errors.New("OrderBy: expr must be string or sq.Raw")
 	}
 	return b
 }
@@ -197,12 +244,15 @@ func Alias(expr interface{}, alias string) AliasExpr {
 
 // Build builds the SQL query and returns the query string, arguments, and error if any invalid type is encountered.
 func (b *SelectBuilder) Build() (string, []interface{}, error) {
-	if b.err != nil {
-		return "", nil, b.err
+	if b.tableClauseInterface.err != nil {
+		return "", nil, b.tableClauseInterface.err
+	}
+	if b.whereClause.err != nil {
+		return "", nil, b.whereClause.err
 	}
 	var sb strings.Builder
 	var err error
-	args := append([]interface{}{}, b.args...)
+	args := []interface{}{}
 
 	dialect := getDialect()
 	placeholderIdx := 1
@@ -261,7 +311,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 		}
 	}
 	sb.WriteString(" FROM ")
-	switch t := b.table.(type) {
+	switch t := b.tableClauseInterface.table.(type) {
 	case string:
 		sb.WriteString(dialect.QuoteIdent(t))
 	case Raw:
@@ -307,21 +357,11 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 		sb.WriteString(strings.Join(b.joinClauses, " "))
 	}
 
-	var wheres []string
-	if len(b.whereParam) > 0 {
-		wheres = append(wheres, b.whereParam...)
-	}
-	if len(b.whereRaw) > 0 {
-		wheres = append(wheres, b.whereRaw...)
-	}
-	if len(wheres) > 0 {
+	whereSQL, whereArgs := b.whereClause.buildWhereSQL(dialect, &placeholderIdx)
+	if whereSQL != "" {
 		sb.WriteString(" WHERE ")
-		whereSQL := strings.Join(wheres, " AND ")
-		for strings.Contains(whereSQL, "?") && dialect.Placeholder(0) != "?" {
-			whereSQL = strings.Replace(whereSQL, "?", dialect.Placeholder(placeholderIdx), 1)
-			placeholderIdx++
-		}
 		sb.WriteString(whereSQL)
+		args = append(args, whereArgs...)
 	}
 
 	var groupBys []string

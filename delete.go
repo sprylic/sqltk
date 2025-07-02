@@ -5,53 +5,74 @@ import (
 	"strings"
 )
 
+// tableClause holds shared table and error logic for builders.
+type tableClause struct {
+	table string
+	err   error
+}
+
+func (t *tableClause) SetTable(table string) {
+	if table == "" {
+		t.err = errors.New("table must be set")
+	} else {
+		t.table = table
+	}
+}
+
+// tableClauseString holds shared table and error logic for builders with string table names.
+type tableClauseString struct {
+	table string
+	err   error
+}
+
+func (t *tableClauseString) SetTable(table string) {
+	if table == "" {
+		t.err = errors.New("table must be set")
+	} else {
+		t.table = table
+	}
+}
+
 // DeleteBuilder builds SQL DELETE queries.
 type DeleteBuilder struct {
-	table      string
-	whereParam []string
-	whereRaw   []string
-	whereArgs  []interface{}
-	err        error
+	tableClauseString
+	whereClause
 }
 
 // Delete creates a new DeleteBuilder for the given table.
 func Delete(table string) *DeleteBuilder {
-	return &DeleteBuilder{table: table}
+	b := &DeleteBuilder{}
+	b.SetTable(table)
+	return b
 }
 
 // Where adds a WHERE clause. Accepts either a condition string (with optional args) or a Raw type.
 func (b *DeleteBuilder) Where(cond interface{}, args ...interface{}) *DeleteBuilder {
-	if b.err != nil {
-		return b
-	}
-	switch c := cond.(type) {
-	case Raw:
-		b.whereRaw = append(b.whereRaw, string(c))
-	case string:
-		b.whereParam = append(b.whereParam, c)
-		b.whereArgs = append(b.whereArgs, args...)
-	default:
-		b.err = errors.New("Where: cond must be string or sq.Raw")
-	}
+	b.whereClause.Where(cond, args...)
 	return b
 }
 
 // WhereEqual adds a WHERE clause for equality (column = value).
 func (b *DeleteBuilder) WhereEqual(column string, value interface{}) *DeleteBuilder {
-	return b.Where(column+" = ?", value)
+	b.whereClause.WhereEqual(column, value)
+	return b
 }
 
 // WhereNotEqual adds a WHERE clause for inequality (column != value).
 func (b *DeleteBuilder) WhereNotEqual(column string, value interface{}) *DeleteBuilder {
-	return b.Where(column+" != ?", value)
+	b.whereClause.WhereNotEqual(column, value)
+	return b
 }
 
 // Build builds the SQL DELETE query and returns the query string, arguments, and error if any.
 func (b *DeleteBuilder) Build() (string, []interface{}, error) {
-	if b.err != nil {
-		return "", nil, b.err
+	if b.tableClauseString.err != nil {
+		return "", nil, b.tableClauseString.err
 	}
-	if b.table == "" {
+	if b.whereClause.err != nil {
+		return "", nil, b.whereClause.err
+	}
+	if b.tableClauseString.table == "" {
 		return "", nil, errors.New("Delete: table must be set")
 	}
 
@@ -62,24 +83,13 @@ func (b *DeleteBuilder) Build() (string, []interface{}, error) {
 	args := []interface{}{}
 
 	sb.WriteString("DELETE FROM ")
-	sb.WriteString(dialect.QuoteIdent(b.table))
+	sb.WriteString(dialect.QuoteIdent(b.tableClauseString.table))
 
-	var wheres []string
-	if len(b.whereParam) > 0 {
-		wheres = append(wheres, b.whereParam...)
-	}
-	if len(b.whereRaw) > 0 {
-		wheres = append(wheres, b.whereRaw...)
-	}
-	if len(wheres) > 0 {
+	whereSQL, whereArgs := b.whereClause.buildWhereSQL(dialect, &placeholderIdx)
+	if whereSQL != "" {
 		sb.WriteString(" WHERE ")
-		whereSQL := strings.Join(wheres, " AND ")
-		for strings.Contains(whereSQL, "?") && dialect.Placeholder(0) != "?" {
-			whereSQL = strings.Replace(whereSQL, "?", dialect.Placeholder(placeholderIdx), 1)
-			placeholderIdx++
-		}
 		sb.WriteString(whereSQL)
-		args = append(args, b.whereArgs...)
+		args = append(args, whereArgs...)
 	}
 
 	return sb.String(), args, nil
