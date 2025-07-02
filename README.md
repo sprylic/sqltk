@@ -2,6 +2,8 @@
 
 A SQL query builder for Go.
 
+[![CI](https://github.com/sprylic/cqb-dev/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sprylic/cqb-dev/actions/workflows/ci.yml)
+
 ## Goals
 - **Lightweight**: Minimal abstractions, no heavy ORM features.
 - **Thread Safe**: Safe for concurrent use.
