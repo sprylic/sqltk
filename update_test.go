@@ -73,6 +73,38 @@ func TestUpdateBuilder(t *testing.T) {
 		}
 	})
 
+	t.Run("where equal", func(t *testing.T) {
+		q := Update("users").Set("active", true).WhereEqual("id", 1)
+		sql, args, err := q.Build()
+		wantSQL := "UPDATE users SET active = ? WHERE id = ?"
+		wantArgs := []interface{}{true, 1}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("where not equal", func(t *testing.T) {
+		q := Update("users").Set("active", false).WhereNotEqual("id", 2)
+		sql, args, err := q.Build()
+		wantSQL := "UPDATE users SET active = ? WHERE id != ?"
+		wantArgs := []interface{}{false, 2}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
 	t.Run("error on missing table", func(t *testing.T) {
 		q := Update("").Set("name", "Alice")
 		_, _, err := q.Build()

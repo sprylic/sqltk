@@ -41,6 +41,38 @@ func TestSelectBuilder(t *testing.T) {
 		}
 	})
 
+	t.Run("where equal", func(t *testing.T) {
+		q := Select("id").From("users").WhereEqual("active", true)
+		sql, args, err := q.Build()
+		wantSQL := "SELECT id FROM users WHERE active = ?"
+		wantArgs := []interface{}{true}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("where not equal", func(t *testing.T) {
+		q := Select("id").From("users").WhereNotEqual("active", false)
+		sql, args, err := q.Build()
+		wantSQL := "SELECT id FROM users WHERE active != ?"
+		wantArgs := []interface{}{false}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
 	t.Run("select all columns", func(t *testing.T) {
 		q := Select().From("users")
 		sql, _, err := q.Build()

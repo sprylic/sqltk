@@ -36,6 +36,16 @@ func (b *DeleteBuilder) Where(cond interface{}, args ...interface{}) *DeleteBuil
 	return b
 }
 
+// WhereEqual adds a WHERE clause for equality (column = value).
+func (b *DeleteBuilder) WhereEqual(column string, value interface{}) *DeleteBuilder {
+	return b.Where(column+" = ?", value)
+}
+
+// WhereNotEqual adds a WHERE clause for inequality (column != value).
+func (b *DeleteBuilder) WhereNotEqual(column string, value interface{}) *DeleteBuilder {
+	return b.Where(column+" != ?", value)
+}
+
 // Build builds the SQL DELETE query and returns the query string, arguments, and error if any.
 func (b *DeleteBuilder) Build() (string, []interface{}, error) {
 	if b.err != nil {

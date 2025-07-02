@@ -76,6 +76,16 @@ func (b *SelectBuilder) Where(cond interface{}, args ...interface{}) *SelectBuil
 	return b
 }
 
+// WhereEqual adds a WHERE clause for equality (column = value).
+func (b *SelectBuilder) WhereEqual(column string, value interface{}) *SelectBuilder {
+	return b.Where(column+" = ?", value)
+}
+
+// WhereNotEqual adds a WHERE clause for inequality (column != value).
+func (b *SelectBuilder) WhereNotEqual(column string, value interface{}) *SelectBuilder {
+	return b.Where(column+" != ?", value)
+}
+
 // GroupBy adds a GROUP BY clause. Accepts either a column string or Raw.
 func (b *SelectBuilder) GroupBy(expr interface{}) *SelectBuilder {
 	if b.err != nil {

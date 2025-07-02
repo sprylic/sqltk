@@ -41,6 +41,38 @@ func TestDeleteBuilder(t *testing.T) {
 		}
 	})
 
+	t.Run("where equal", func(t *testing.T) {
+		q := Delete("users").WhereEqual("active", true)
+		sql, args, err := q.Build()
+		wantSQL := "DELETE FROM users WHERE active = ?"
+		wantArgs := []interface{}{true}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("where not equal", func(t *testing.T) {
+		q := Delete("users").WhereNotEqual("active", false)
+		sql, args, err := q.Build()
+		wantSQL := "DELETE FROM users WHERE active != ?"
+		wantArgs := []interface{}{false}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
 	t.Run("error on missing table", func(t *testing.T) {
 		q := Delete("").Where("id = ?", 1)
 		_, _, err := q.Build()

@@ -57,6 +57,16 @@ func (b *UpdateBuilder) Where(cond interface{}, args ...interface{}) *UpdateBuil
 	return b
 }
 
+// WhereEqual adds a WHERE clause for equality (column = value).
+func (b *UpdateBuilder) WhereEqual(column string, value interface{}) *UpdateBuilder {
+	return b.Where(column+" = ?", value)
+}
+
+// WhereNotEqual adds a WHERE clause for inequality (column != value).
+func (b *UpdateBuilder) WhereNotEqual(column string, value interface{}) *UpdateBuilder {
+	return b.Where(column+" != ?", value)
+}
+
 // Build builds the SQL UPDATE query and returns the query string, arguments, and error if any.
 func (b *UpdateBuilder) Build() (string, []interface{}, error) {
 	if b.err != nil {
