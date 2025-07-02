@@ -30,10 +30,18 @@ func (w *whereClause) Where(cond interface{}, args ...interface{}) {
 }
 
 func (w *whereClause) WhereEqual(column string, value interface{}) {
+	if value == nil {
+		w.Where(column + " IS NULL")
+		return
+	}
 	w.Where(column+" = ?", value)
 }
 
 func (w *whereClause) WhereNotEqual(column string, value interface{}) {
+	if value == nil {
+		w.Where(column + " IS NOT NULL")
+		return
+	}
 	w.Where(column+" != ?", value)
 }
 

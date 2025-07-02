@@ -73,6 +73,36 @@ func TestSelectBuilder(t *testing.T) {
 		}
 	})
 
+	t.Run("where column is null", func(t *testing.T) {
+		q := Select("id").From("users").WhereEqual("deleted_at", nil)
+		sql, args, err := q.Build()
+		wantSQL := "SELECT id FROM users WHERE deleted_at IS NULL"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("where column is not null", func(t *testing.T) {
+		q := Select("id").From("users").WhereNotEqual("created_at", nil)
+		sql, args, err := q.Build()
+		wantSQL := "SELECT id FROM users WHERE created_at IS NOT NULL"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
 	t.Run("select all columns", func(t *testing.T) {
 		q := Select().From("users")
 		sql, _, err := q.Build()
