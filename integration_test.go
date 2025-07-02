@@ -96,7 +96,6 @@ func TestMySQLIntegration(t *testing.T) {
 		t.Skipf("skipping: failed to connect to mysql: %v", err)
 	}
 	defer db.Close()
-	SetDialect(MySQL())
 
 	_, _ = db.Exec(`DROP TABLE IF EXISTS users`)
 	_, err = db.Exec(`CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), age INT)`)
