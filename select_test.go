@@ -233,10 +233,10 @@ func TestSelectBuilder_GroupBy_Having_OrderBy(t *testing.T) {
 }
 
 func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
-	t.Run("inner join string", func(t *testing.T) {
-		q := Select("u.id", "p.id").From("users u").Join("INNER JOIN posts p ON p.user_id = u.id")
+	t.Run("inner join fluent", func(t *testing.T) {
+		q := Select("u.id", "p.id").From("users u").Join("posts p").On("p.user_id", "u.id")
 		sql, _, err := q.Build()
-		wantSQL := "SELECT u.id, p.id FROM users u INNER JOIN posts p ON p.user_id = u.id"
+		wantSQL := "SELECT u.id, p.id FROM users u JOIN posts p ON p.user_id = u.id"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -245,8 +245,8 @@ func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
 		}
 	})
 
-	t.Run("left join raw", func(t *testing.T) {
-		q := Select("u.id", "p.id").From("users u").Join(Raw("LEFT JOIN posts p ON p.user_id = u.id"))
+	t.Run("left join fluent", func(t *testing.T) {
+		q := Select("u.id", "p.id").From("users u").LeftJoin("posts p").On("p.user_id", "u.id")
 		sql, _, err := q.Build()
 		wantSQL := "SELECT u.id, p.id FROM users u LEFT JOIN posts p ON p.user_id = u.id"
 		if err != nil {
@@ -257,12 +257,12 @@ func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
 		}
 	})
 
-	t.Run("multiple joins", func(t *testing.T) {
+	t.Run("multiple joins fluent", func(t *testing.T) {
 		q := Select("u.id", "p.id", "c.id").From("users u").
-			Join("INNER JOIN posts p ON p.user_id = u.id").
-			Join(Raw("LEFT JOIN comments c ON c.post_id = p.id"))
+			Join("posts p").On("p.user_id", "u.id").
+			LeftJoin("comments c").On("c.post_id", "p.id")
 		sql, _, err := q.Build()
-		wantSQL := "SELECT u.id, p.id, c.id FROM users u INNER JOIN posts p ON p.user_id = u.id LEFT JOIN comments c ON c.post_id = p.id"
+		wantSQL := "SELECT u.id, p.id, c.id FROM users u JOIN posts p ON p.user_id = u.id LEFT JOIN comments c ON c.post_id = p.id"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -309,13 +309,13 @@ func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
 
 	t.Run("full query with join, limit, offset", func(t *testing.T) {
 		q := Select("u.id", "p.id").From("users u").
-			Join("INNER JOIN posts p ON p.user_id = u.id").
+			Join("posts p").On("p.user_id", "u.id").
 			Where("u.active = ?", true).
 			OrderBy("u.id DESC").
 			Limit(20).
 			Offset(10)
 		sql, args, err := q.Build()
-		wantSQL := "SELECT u.id, p.id FROM users u INNER JOIN posts p ON p.user_id = u.id WHERE u.active = ? ORDER BY u.id DESC LIMIT 20 OFFSET 10"
+		wantSQL := "SELECT u.id, p.id FROM users u JOIN posts p ON p.user_id = u.id WHERE u.active = ? ORDER BY u.id DESC LIMIT 20 OFFSET 10"
 		wantArgs := []interface{}{true}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -325,13 +325,6 @@ func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
 		}
 		if !reflect.DeepEqual(args, wantArgs) {
 			t.Errorf("got args %v, want %v", args, wantArgs)
-		}
-	})
-
-	t.Run("error on invalid join type", func(t *testing.T) {
-		_, _, err := Select("id").From("users").Join(123).Build()
-		if err == nil {
-			t.Errorf("expected error, got none")
 		}
 	})
 }
@@ -478,42 +471,6 @@ func TestSelectBuilder_Alias(t *testing.T) {
 	})
 }
 
-func TestSelectBuilder_JoinAlias(t *testing.T) {
-	t.Run("join subquery with alias", func(t *testing.T) {
-		sub := Select("id").From("orders")
-		join := Raw("(" + sub.MustSQL() + ") AS o ON o.id = u.id")
-		q := Select("u.id").From("users u").Join(join)
-		sql, _, err := q.Build()
-		wantSQL := "SELECT u.id FROM users u (SELECT id FROM orders) AS o ON o.id = u.id"
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if sql != wantSQL {
-			t.Errorf("got SQL %q, want %q", sql, wantSQL)
-		}
-	})
-
-	t.Run("join raw with alias", func(t *testing.T) {
-		q := Select("u.id").From("users u").Join(Alias(Raw("accounts a"), "a_alias"))
-		sql, _, err := q.Build()
-		wantSQL := "SELECT u.id FROM users u accounts a AS a_alias"
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if sql != wantSQL {
-			t.Errorf("got SQL %q, want %q", sql, wantSQL)
-		}
-	})
-
-	t.Run("error on invalid alias expr type in join", func(t *testing.T) {
-		q := Select("id").From("users").Join(Alias(123, "bad"))
-		_, _, err := q.Build()
-		if err == nil {
-			t.Errorf("expected error, got none")
-		}
-	})
-}
-
 func TestSelectBuilder_Compose(t *testing.T) {
 	isActive := func(b *SelectBuilder) *SelectBuilder {
 		return b.Where("active = ?", true)
@@ -625,5 +582,55 @@ func TestSelectBuilder_Dialect(t *testing.T) {
 			t.Errorf("got SQL %q, want %q", sql, wantSQL)
 		}
 		reset()
+	})
+}
+
+func TestSelectBuilder_FluentJoinOn(t *testing.T) {
+	q := Select("u.id").From("users u").Join("orders o").On("o.user_id", "u.id")
+	sql, _, err := q.Build()
+	wantSQL := "SELECT u.id FROM users u JOIN orders o ON o.user_id = u.id"
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if sql != wantSQL {
+		t.Errorf("got SQL %q, want %q", sql, wantSQL)
+	}
+}
+
+func TestSelectBuilder_FluentJoinTypes(t *testing.T) {
+	t.Run("left join", func(t *testing.T) {
+		q := Select("u.id").From("users u").LeftJoin("orders o").On("o.user_id", "u.id")
+		sql, _, err := q.Build()
+		wantSQL := "SELECT u.id FROM users u LEFT JOIN orders o ON o.user_id = u.id"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+	})
+
+	t.Run("right join", func(t *testing.T) {
+		q := Select("u.id").From("users u").RightJoin("orders o").On("o.user_id", "u.id")
+		sql, _, err := q.Build()
+		wantSQL := "SELECT u.id FROM users u RIGHT JOIN orders o ON o.user_id = u.id"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+	})
+
+	t.Run("full join", func(t *testing.T) {
+		q := Select("u.id").From("users u").FullJoin("orders o").On("o.user_id", "u.id")
+		sql, _, err := q.Build()
+		wantSQL := "SELECT u.id FROM users u FULL JOIN orders o ON o.user_id = u.id"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
 	})
 }

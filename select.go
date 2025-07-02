@@ -125,37 +125,39 @@ func (b *SelectBuilder) OrderBy(expr interface{}) *SelectBuilder {
 	return b
 }
 
-// Join adds a JOIN clause. Accepts either a join string, Raw, *SelectBuilder, or AliasExpr.
-func (b *SelectBuilder) Join(clause interface{}) *SelectBuilder {
-	if b.err != nil {
-		return b
-	}
-	switch c := clause.(type) {
-	case Raw:
-		b.joinClauses = append(b.joinClauses, string(c))
-	case string:
-		b.joinClauses = append(b.joinClauses, c)
-	case *SelectBuilder:
-		b.joinClauses = append(b.joinClauses, "("+c.MustSQL()+")")
-	case AliasExpr:
-		// Render (expr) AS alias or expr AS alias
-		var joinStr string
-		switch expr := c.Expr.(type) {
-		case *SelectBuilder:
-			joinStr = "(" + expr.MustSQL() + ") AS " + c.Alias
-		case string:
-			joinStr = expr + " AS " + c.Alias
-		case Raw:
-			joinStr = string(expr) + " AS " + c.Alias
-		default:
-			b.err = errors.New("Join: AliasExpr expr must be string, sq.Raw, or *SelectBuilder")
-			return b
-		}
-		b.joinClauses = append(b.joinClauses, joinStr)
-	default:
-		b.err = errors.New("Join: clause must be string, sq.Raw, *SelectBuilder, or sq.AliasExpr")
-	}
-	return b
+// JoinBuilder is used for fluent JOIN ... ON ... chaining.
+type JoinBuilder struct {
+	parent    *SelectBuilder
+	joinType  string
+	joinTable string
+}
+
+// Join starts an INNER JOIN clause. Call .On(left, right) to specify the ON condition.
+// Example: q := cqb.Select("u.id").From("users u").Join("orders o").On("o.user_id", "u.id")
+func (b *SelectBuilder) Join(table string) *JoinBuilder {
+	return &JoinBuilder{parent: b, joinType: "JOIN", joinTable: table}
+}
+
+// LeftJoin starts a LEFT JOIN clause. Call .On(left, right) to specify the ON condition.
+func (b *SelectBuilder) LeftJoin(table string) *JoinBuilder {
+	return &JoinBuilder{parent: b, joinType: "LEFT JOIN", joinTable: table}
+}
+
+// RightJoin starts a RIGHT JOIN clause. Call .On(left, right) to specify the ON condition.
+func (b *SelectBuilder) RightJoin(table string) *JoinBuilder {
+	return &JoinBuilder{parent: b, joinType: "RIGHT JOIN", joinTable: table}
+}
+
+// FullJoin starts a FULL JOIN clause. Call .On(left, right) to specify the ON condition.
+func (b *SelectBuilder) FullJoin(table string) *JoinBuilder {
+	return &JoinBuilder{parent: b, joinType: "FULL JOIN", joinTable: table}
+}
+
+// On finalizes the JOIN ... ON ... clause and returns the parent SelectBuilder.
+func (jb *JoinBuilder) On(left, right string) *SelectBuilder {
+	clause := jb.joinType + " " + jb.joinTable + " ON " + left + " = " + right
+	jb.parent.joinClauses = append(jb.parent.joinClauses, clause)
+	return jb.parent
 }
 
 // Limit sets a LIMIT clause.
