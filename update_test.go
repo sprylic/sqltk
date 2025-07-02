@@ -1,0 +1,113 @@
+package cqb
+
+import (
+	"reflect"
+	"testing"
+)
+
+func TestUpdateBuilder(t *testing.T) {
+	t.Run("basic update", func(t *testing.T) {
+		q := Update("users").Set("name", "Alice").Where("id = ?", 1)
+		sql, args, err := q.Build()
+		wantSQL := "UPDATE users SET name = ? WHERE id = ?"
+		wantArgs := []interface{}{"Alice", 1}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("multiple sets", func(t *testing.T) {
+		q := Update("users").Set("name", "Alice").Set("age", 30).Where("id = ?", 1)
+		sql, args, err := q.Build()
+		wantSQL := "UPDATE users SET name = ?, age = ? WHERE id = ?"
+		wantArgs := []interface{}{"Alice", 30, 1}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("raw set", func(t *testing.T) {
+		q := Update("users").SetRaw("updated_at = NOW()")
+		sql, args, err := q.Build()
+		wantSQL := "UPDATE users SET updated_at = NOW()"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("where raw", func(t *testing.T) {
+		q := Update("users").Set("name", "Alice").Where(Raw("id = 1"))
+		sql, args, err := q.Build()
+		wantSQL := "UPDATE users SET name = ? WHERE id = 1"
+		wantArgs := []interface{}{"Alice"}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("error on missing table", func(t *testing.T) {
+		q := Update("").Set("name", "Alice")
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error, got none")
+		}
+	})
+
+	t.Run("error on no sets", func(t *testing.T) {
+		q := Update("users")
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error, got none")
+		}
+	})
+
+	t.Run("error on invalid where type", func(t *testing.T) {
+		q := Update("users").Set("name", "Alice").Where(123)
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error, got none")
+		}
+	})
+}
+
+func TestPostgresUpdateBuilder_Returning(t *testing.T) {
+	pq := NewPostgresUpdate("users")
+	pq.UpdateBuilder = pq.UpdateBuilder.Set("name", "Alice").Where("id = ?", 1)
+	pq = pq.Returning("id", "name")
+	sql, args, err := pq.Build()
+	wantSQL := "UPDATE users SET name = ? WHERE id = ? RETURNING id, name"
+	wantArgs := []interface{}{"Alice", 1}
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if sql != wantSQL {
+		t.Errorf("got SQL %q, want %q", sql, wantSQL)
+	}
+	if !reflect.DeepEqual(args, wantArgs) {
+		t.Errorf("got args %v, want %v", args, wantArgs)
+	}
+}
