@@ -74,6 +74,24 @@ func TestInsertBuilder(t *testing.T) {
 			t.Errorf("expected error, got none")
 		}
 	})
+
+	t.Run("debugsql single row", func(t *testing.T) {
+		q := Insert("users").Columns("id", "name").Values(1, "Alice")
+		got := q.DebugSQL()
+		want := "INSERT INTO users (id, name) VALUES (1, 'Alice')"
+		if got != want {
+			t.Errorf("DebugSQL got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("debugsql multi row", func(t *testing.T) {
+		q := Insert("users").Columns("id", "name").Values(1, "Alice").Values(2, "Bob")
+		got := q.DebugSQL()
+		want := "INSERT INTO users (id, name) VALUES (1, 'Alice'), (2, 'Bob')"
+		if got != want {
+			t.Errorf("DebugSQL got %q, want %q", got, want)
+		}
+	})
 }
 
 func TestPostgresInsertBuilder_Returning(t *testing.T) {

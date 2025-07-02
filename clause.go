@@ -2,6 +2,7 @@ package cqb
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -24,7 +25,7 @@ func (w *whereClause) Where(cond interface{}, args ...interface{}) {
 		w.whereParam = append(w.whereParam, c)
 		w.whereArgs = append(w.whereArgs, args...)
 	default:
-		w.err = errors.New("Where: cond must be string or sq.Raw")
+		w.err = fmt.Errorf("Where: cond must be string or sq.Raw (got type %T)", cond)
 	}
 }
 
@@ -63,7 +64,7 @@ type tableClauseString struct {
 
 func (t *tableClauseString) SetTable(table string) {
 	if table == "" {
-		t.err = errors.New("table must be set")
+		t.err = errors.New("tableClauseString: table must be set")
 	} else {
 		t.table = table
 	}
@@ -77,8 +78,47 @@ type tableClauseInterface struct {
 
 func (t *tableClauseInterface) SetTable(table interface{}) {
 	if table == nil || table == "" {
-		t.err = errors.New("table must be set")
+		t.err = errors.New("tableClauseInterface: table must be set")
 	} else {
 		t.table = table
+	}
+}
+
+// InterpolateSQL returns the query with arguments interpolated for debugging/logging only.
+// DO NOT use the result for execution (not safe against SQL injection).
+func InterpolateSQL(query string, args []interface{}) string {
+	if len(args) == 0 {
+		return query
+	}
+	out := ""
+	argIdx := 0
+	for i := 0; i < len(query); i++ {
+		if query[i] == '?' && argIdx < len(args) {
+			out += formatArg(args[argIdx])
+			argIdx++
+		} else {
+			out += string(query[i])
+		}
+	}
+	return out
+}
+
+func formatArg(arg interface{}) string {
+	switch v := arg.(type) {
+	case string:
+		return "'" + strings.ReplaceAll(v, "'", "''") + "'"
+	case []byte:
+		return "'" + strings.ReplaceAll(string(v), "'", "''") + "'"
+	case int, int8, int16, int32, int64, float32, float64:
+		return fmt.Sprintf("%v", v)
+	case bool:
+		if v {
+			return "TRUE"
+		}
+		return "FALSE"
+	case nil:
+		return "NULL"
+	default:
+		return fmt.Sprintf("'%v'", v)
 	}
 }

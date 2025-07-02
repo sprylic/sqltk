@@ -99,3 +99,10 @@ func (b *PostgresDeleteBuilder) Build() (string, []interface{}, error) {
 // Example usage:
 //   pq := sq.NewPostgresDelete("users").Where("id = ?", 1).Returning("id")
 //   sql, args, err := pq.Build()
+
+// DebugSQL returns the SQL with arguments interpolated for debugging/logging only.
+// DO NOT use the result for execution (not safe against SQL injection).
+func (b *DeleteBuilder) DebugSQL() string {
+	sql, args, _ := b.Build()
+	return InterpolateSQL(sql, args)
+}

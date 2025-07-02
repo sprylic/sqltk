@@ -123,3 +123,10 @@ func (b *PostgresInsertBuilder) Build() (string, []interface{}, error) {
 // Example usage:
 //   pq := sq.NewPostgresInsert("users").Columns("name").Values("Alice").Returning("id")
 //   sql, args, err := pq.Build()
+
+// DebugSQL returns the SQL with arguments interpolated for debugging/logging only.
+// DO NOT use the result for execution (not safe against SQL injection).
+func (b *InsertBuilder) DebugSQL() string {
+	sql, args, _ := b.Build()
+	return InterpolateSQL(sql, args)
+}
