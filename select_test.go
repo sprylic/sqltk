@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+func init() {
+	SetDialect(Standard())
+}
+
 func TestSelectBuilder(t *testing.T) {
 	t.Run("basic select", func(t *testing.T) {
 		q := Select("id", "name").From("users")

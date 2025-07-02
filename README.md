@@ -1,4 +1,4 @@
-# Composable Query Builder
+# cqb
 
 A SQL query builder for Go.
 
@@ -8,11 +8,20 @@ A SQL query builder for Go.
 - **Database Agnostic**: Works with any database that implements Go's `database/sql` interface.
 - **Simple API**: Make common queries (SELECT, INSERT, UPDATE, DELETE) easy, but allow for custom/raw SQL.
 
+## ⚠️ Default SQL Dialect
+**MySQL is the default dialect.**
+- Identifiers are quoted with backticks (`` `foo` ``) and placeholders are `?`.
+- If you use Postgres or another database, **set the dialect explicitly**:
+  ```go
+  cqb.SetDialect(cqb.Postgres()) // for Postgres
+  cqb.SetDialect(cqb.Standard()) // for no quoting (legacy/ANSI)
+  ```
+
 ## Setting the SQL Dialect
 Set the dialect globally for your application:
 
 ```go
-import "github.com/sprylic/cqb"
+import "github.com/yourusername/sq"
 
 sq.SetDialect(sq.Postgres()) // or sq.MySQL(), sq.Standard()
 ```
@@ -23,7 +32,7 @@ sq.SetDialect(sq.Postgres()) // or sq.MySQL(), sq.Standard()
 ```go
 q := sq.Select("id", "name").From("users").Where("active = ?", true)
 sql, args, err := q.Build()
-// sql: "SELECT id, name FROM users WHERE active = ?" (Standard dialect)
+// sql: "SELECT `id`, `name` FROM `users` WHERE active = ?" (MySQL dialect by default)
 // args: [true]
 ```
 
@@ -32,7 +41,7 @@ sql, args, err := q.Build()
 sub := sq.Select("COUNT(*)").From("orders").Where("orders.user_id = users.id")
 q := sq.Select(sq.Alias(sub, "order_count")).From("users")
 sql, args, err := q.Build()
-// sql: "SELECT (SELECT COUNT(*) FROM orders WHERE orders.user_id = users.id) AS order_count FROM users"
+// sql: "SELECT (SELECT COUNT(*) FROM orders WHERE orders.user_id = users.id) AS order_count FROM `users`"
 ```
 
 ### Query Composition
@@ -45,7 +54,7 @@ isAdult := func(b *sq.SelectBuilder) *sq.SelectBuilder {
 }
 q := sq.Select("id").From("users").Compose(isActive, isAdult)
 sql, args, err := q.Build()
-// sql: "SELECT id FROM users WHERE active = ? AND age >= ?"
+// sql: "SELECT `id` FROM `users` WHERE active = ? AND age >= ?"
 // args: [true, 18]
 ```
 
@@ -53,7 +62,7 @@ sql, args, err := q.Build()
 ```go
 q := sq.Insert("users").Columns("id", "name").Values(1, "Alice").Values(2, "Bob")
 sql, args, err := q.Build()
-// sql: "INSERT INTO users (id, name) VALUES (?, ?), (?, ?)"
+// sql: "INSERT INTO `users` (`id`, `name`) VALUES (?, ?), (?, ?)"
 // args: [1, "Alice", 2, "Bob"]
 ```
 
@@ -61,7 +70,7 @@ sql, args, err := q.Build()
 ```go
 q := sq.Update("users").Set("name", "Alice").Where("id = ?", 1)
 sql, args, err := q.Build()
-// sql: "UPDATE users SET name = ? WHERE id = ?"
+// sql: "UPDATE `users` SET `name` = ? WHERE id = ?"
 // args: ["Alice", 1]
 ```
 
@@ -69,15 +78,15 @@ sql, args, err := q.Build()
 ```go
 q := sq.Delete("users").Where("id = ?", 1)
 sql, args, err := q.Build()
-// sql: "DELETE FROM users WHERE id = ?"
+// sql: "DELETE FROM `users` WHERE id = ?"
 // args: [1]
 ```
 
 ## SQL Dialect Examples
 
-#### MySQL
+#### MySQL (default)
 ```go
-sq.SetDialect(sq.MySQL())
+// No need to set dialect for MySQL, it's the default
 q := sq.Select("id", "name").From("users").Where("id = ?", 1)
 sql, args, err := q.Build()
 // sql: "SELECT `id`, `name` FROM `users` WHERE id = ?"

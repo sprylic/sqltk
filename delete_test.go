@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+func init() {
+	SetDialect(Standard())
+}
+
 func TestDeleteBuilder(t *testing.T) {
 	t.Run("basic delete", func(t *testing.T) {
 		q := Delete("users").Where("id = ?", 1)

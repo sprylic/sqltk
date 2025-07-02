@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+func init() {
+	SetDialect(Standard())
+}
+
 func TestUpdateBuilder(t *testing.T) {
 	t.Run("basic update", func(t *testing.T) {
 		q := Update("users").Set("name", "Alice").Where("id = ?", 1)

@@ -37,13 +37,13 @@ var (
 	postgresDialectInstance = postgresDialect{}
 
 	dialectMu     sync.RWMutex
-	globalDialect Dialect = &standardDialectInstance
+	globalDialect Dialect = &mySQLDialectInstance
 )
 
-// Standard returns the standard SQL dialect (default).
+// Standard returns the standard SQL dialect (no quoting, not the default).
 func Standard() Dialect { return &standardDialectInstance }
 
-// MySQL returns the MySQL SQL dialect.
+// MySQL returns the MySQL SQL dialect (default).
 func MySQL() Dialect { return &mySQLDialectInstance }
 
 // Postgres returns the Postgres SQL dialect.

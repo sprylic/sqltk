@@ -6,6 +6,10 @@ import (
 	"testing"
 )
 
+func init() {
+	SetDialect(Standard())
+}
+
 func TestInsertBuilder(t *testing.T) {
 	t.Run("single row insert", func(t *testing.T) {
 		q := Insert("users").Columns("id", "name").Values(1, "Alice")
