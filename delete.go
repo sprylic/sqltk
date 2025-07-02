@@ -5,34 +5,6 @@ import (
 	"strings"
 )
 
-// tableClause holds shared table and error logic for builders.
-type tableClause struct {
-	table string
-	err   error
-}
-
-func (t *tableClause) SetTable(table string) {
-	if table == "" {
-		t.err = errors.New("table must be set")
-	} else {
-		t.table = table
-	}
-}
-
-// tableClauseString holds shared table and error logic for builders with string table names.
-type tableClauseString struct {
-	table string
-	err   error
-}
-
-func (t *tableClauseString) SetTable(table string) {
-	if table == "" {
-		t.err = errors.New("table must be set")
-	} else {
-		t.table = table
-	}
-}
-
 // DeleteBuilder builds SQL DELETE queries.
 type DeleteBuilder struct {
 	tableClauseString
