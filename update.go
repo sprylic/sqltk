@@ -48,8 +48,8 @@ func (b *UpdateBuilder) SetRaw(expr string) *UpdateBuilder {
 	return b
 }
 
-// Where adds a WHERE clause. Accepts either a Condition or Raw.
-func (b *UpdateBuilder) Where(cond interface{}, args ...interface{}) *UpdateBuilder {
+// Where adds a WHERE clause. Accepts a Condition.
+func (b *UpdateBuilder) Where(cond Condition, args ...interface{}) *UpdateBuilder {
 	b.whereClause.Where(cond, args...)
 	return b
 }

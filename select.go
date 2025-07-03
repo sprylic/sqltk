@@ -50,8 +50,8 @@ func (b *SelectBuilder) From(table interface{}) *SelectBuilder {
 	return b
 }
 
-// Where adds a WHERE clause to the query. Accepts either a Condition or Raw.
-func (b *SelectBuilder) Where(cond interface{}, args ...interface{}) *SelectBuilder {
+// Where adds a WHERE clause to the query. Accepts a Condition.
+func (b *SelectBuilder) Where(cond Condition, args ...interface{}) *SelectBuilder {
 	b.whereClause.Where(cond, args...)
 	return b
 }
@@ -84,33 +84,21 @@ func (b *SelectBuilder) GroupBy(expr interface{}) *SelectBuilder {
 	return b
 }
 
-// Having adds a HAVING clause. Accepts either a Condition or Raw.
-func (b *SelectBuilder) Having(cond interface{}, args ...interface{}) *SelectBuilder {
+// Having adds a HAVING clause. Accepts a Condition.
+func (b *SelectBuilder) Having(cond Condition, args ...interface{}) *SelectBuilder {
 	if b.whereClause.err != nil || b.tableClauseInterface.err != nil {
 		return b
 	}
 
-	// Handle Condition interface
-	if condition, ok := cond.(Condition); ok {
-		sql, condArgs, err := condition.BuildCondition()
-		if err != nil {
-			b.whereClause.err = fmt.Errorf("Having: condition error: %w", err)
-			return b
-		}
-		if sql != "" {
-			b.havingParam = append(b.havingParam, sql)
-			b.havingArgs = append(b.havingArgs, condArgs...)
-		}
+	sql, condArgs, err := cond.BuildCondition()
+	if err != nil {
+		b.whereClause.err = fmt.Errorf("Having: condition error: %w", err)
 		return b
 	}
-
-	// Handle legacy Raw type for backward compatibility
-	if raw, ok := cond.(Raw); ok {
-		b.havingRaw = append(b.havingRaw, string(raw))
-		return b
+	if sql != "" {
+		b.havingParam = append(b.havingParam, sql)
+		b.havingArgs = append(b.havingArgs, condArgs...)
 	}
-
-	b.whereClause.err = errors.New("Having: cond must be Condition or Raw. Use NewStringCondition() for string conditions")
 	return b
 }
 

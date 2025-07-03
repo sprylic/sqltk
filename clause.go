@@ -14,32 +14,20 @@ type whereClause struct {
 	err        error
 }
 
-func (w *whereClause) Where(cond interface{}, args ...interface{}) {
+func (w *whereClause) Where(cond Condition, args ...interface{}) {
 	if w.err != nil {
 		return
 	}
 
-	// Handle Condition interface
-	if condition, ok := cond.(Condition); ok {
-		sql, condArgs, err := condition.BuildCondition()
-		if err != nil {
-			w.err = fmt.Errorf("Where: condition error: %w", err)
-			return
-		}
-		if sql != "" {
-			w.whereParam = append(w.whereParam, sql)
-			w.whereArgs = append(w.whereArgs, condArgs...)
-		}
+	sql, condArgs, err := cond.BuildCondition()
+	if err != nil {
+		w.err = fmt.Errorf("Where: condition error: %w", err)
 		return
 	}
-
-	// Handle legacy Raw type for backward compatibility
-	if raw, ok := cond.(Raw); ok {
-		w.whereRaw = append(w.whereRaw, string(raw))
-		return
+	if sql != "" {
+		w.whereParam = append(w.whereParam, sql)
+		w.whereArgs = append(w.whereArgs, condArgs...)
 	}
-
-	w.err = fmt.Errorf("Where: cond must be Condition or Raw (got type %T). Use NewStringCondition() for string conditions", cond)
 }
 
 func (w *whereClause) WhereEqual(column string, value interface{}) {
@@ -72,7 +60,7 @@ func (w *whereClause) buildWhereSQL(dialect Dialect, placeholderIdx *int) (strin
 	whereSQL := strings.Join(wheres, " AND ")
 	for strings.Contains(whereSQL, "?") && dialect.Placeholder(0) != "?" {
 		whereSQL = strings.Replace(whereSQL, "?", dialect.Placeholder(*placeholderIdx), 1)
-		(*placeholderIdx)++
+		*placeholderIdx++
 	}
 	return whereSQL, w.whereArgs
 }

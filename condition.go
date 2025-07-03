@@ -13,6 +13,9 @@ type Condition interface {
 	BuildCondition() (string, []interface{}, error)
 }
 
+// ICondition is an alias for Condition for better readability in method signatures.
+type ICondition = Condition
+
 // StringCondition wraps a string condition for type safety.
 type StringCondition struct {
 	SQL  string
@@ -38,6 +41,11 @@ type RawCondition struct {
 // NewRawCondition creates a new RawCondition from Raw SQL.
 func NewRawCondition(sql Raw) *RawCondition {
 	return &RawCondition{SQL: sql}
+}
+
+// AsCondition converts a Raw to a Condition for use in Where/Having clauses.
+func AsCondition(r Raw) Condition {
+	return &RawCondition{SQL: r}
 }
 
 // BuildCondition implements the Condition interface.

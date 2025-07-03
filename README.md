@@ -70,21 +70,42 @@ The `ConditionBuilder` provides a fluent, composable API for building complex SQ
 
 **Type-Safe Conditions:**
 
-The library now provides a `Condition` interface for type-safe condition handling. This prevents unsafe queries and makes the API more explicit:
+The library now provides a `Condition` interface for type-safe condition handling. This prevents unsafe queries and makes the API more explicit. The `Where()` and `Having()` methods now accept only `Condition` types:
 
 ```go
 // Type-safe string condition
 cond := stk.NewStringCondition("active = ? AND age > ?", true, 18)
 q := stk.Select("id").From("users").Where(cond)
 
-// Type-safe raw condition
-cond := stk.NewRawCondition(stk.Raw("id = 1"))
+// Type-safe raw condition (requires AsCondition wrapper)
+cond := stk.AsCondition(stk.Raw("id = 1"))
 q := stk.Select("id").From("users").Where(cond)
 
 // ConditionBuilder (implements Condition interface)
 cond := stk.NewCond().Equal("active", true).And(stk.NewCond().GreaterThan("age", 18))
 q := stk.Select("id").From("users").Where(cond)
+
+// Compile-time type safety - these will not compile:
+// q.Where("active = ?", true)           // Error: string doesn't implement Condition
+// q.Where(123)                          // Error: int doesn't implement Condition
+// q.Where(stk.Raw("id = 1"))            // Error: Raw doesn't implement Condition
 ```
+
+**Interface Design:**
+
+The `Condition` interface provides a clean, type-safe way to handle SQL conditions:
+
+```go
+type Condition interface {
+    BuildCondition() (string, []interface{}, error)
+}
+```
+
+All condition types implement this interface:
+- `*StringCondition` - for parameterized string conditions
+- `*RawCondition` - for raw SQL conditions  
+- `*ConditionBuilder` - for fluent condition building
+- `AsCondition(Raw)` - helper to convert Raw to Condition
 
 **Examples:**
 

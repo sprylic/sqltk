@@ -58,7 +58,7 @@ func TestUpdateBuilder(t *testing.T) {
 	})
 
 	t.Run("where raw", func(t *testing.T) {
-		q := Update("users").Set("name", "Alice").Where(Raw("id = 1"))
+		q := Update("users").Set("name", "Alice").Where(AsCondition(Raw("id = 1")))
 		sql, args, err := q.Build()
 		wantSQL := "UPDATE users SET name = ? WHERE id = 1"
 		wantArgs := []interface{}{"Alice"}
@@ -164,11 +164,9 @@ func TestUpdateBuilder(t *testing.T) {
 	})
 
 	t.Run("error on invalid where type", func(t *testing.T) {
-		q := Update("users").Set("name", "Alice").Where(123)
-		_, _, err := q.Build()
-		if err == nil {
-			t.Errorf("expected error, got none")
-		}
+		// This test demonstrates that the compiler will catch invalid types
+		// We can't test this at runtime since it's a compile-time error
+		t.Skip("This is now a compile-time error, not a runtime error")
 	})
 }
 

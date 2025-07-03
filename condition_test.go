@@ -2,7 +2,6 @@ package stk
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -632,18 +631,9 @@ func TestTypeSafeWhere(t *testing.T) {
 		}
 	})
 
-	t.Run("string where now requires NewStringCondition", func(t *testing.T) {
-		_, _, err := Select("id").From("users").Where("active = ? AND age > ?", true, 18).Build()
-		if err == nil {
-			t.Errorf("expected error for direct string condition, got none")
-		}
-		if !strings.Contains(err.Error(), "Use NewStringCondition() for string conditions") {
-			t.Errorf("unexpected error message: %v", err)
-		}
-	})
-
-	t.Run("legacy raw where still works", func(t *testing.T) {
-		q := Select("id").From("users").Where(Raw("id = 1"))
+	t.Run("raw where now requires AsCondition", func(t *testing.T) {
+		cond := AsCondition(Raw("id = 1"))
+		q := Select("id").From("users").Where(cond)
 		sql, args, err := q.Build()
 		wantSQL := "SELECT id FROM users WHERE id = 1"
 		if err != nil {
@@ -657,13 +647,9 @@ func TestTypeSafeWhere(t *testing.T) {
 		}
 	})
 
-	t.Run("error on invalid type", func(t *testing.T) {
-		_, _, err := Select("id").From("users").Where(123).Build()
-		if err == nil {
-			t.Errorf("expected error for invalid type, got none")
-		}
-		if !strings.Contains(err.Error(), "Use NewStringCondition() for string conditions") {
-			t.Errorf("unexpected error message: %v", err)
-		}
+	t.Run("invalid type now requires proper condition", func(t *testing.T) {
+		// This test demonstrates that the compiler will catch invalid types
+		// We can't test this at runtime since it's a compile-time error
+		t.Skip("This is now a compile-time error, not a runtime error")
 	})
 }

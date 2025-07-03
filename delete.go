@@ -19,8 +19,8 @@ func Delete(table string) *DeleteBuilder {
 	return b
 }
 
-// Where adds a WHERE clause. Accepts either a Condition or Raw.
-func (b *DeleteBuilder) Where(cond interface{}, args ...interface{}) *DeleteBuilder {
+// Where adds a WHERE clause. Accepts a Condition.
+func (b *DeleteBuilder) Where(cond Condition, args ...interface{}) *DeleteBuilder {
 	b.whereClause.Where(cond, args...)
 	return b
 }

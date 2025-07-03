@@ -1,3 +1,5 @@
+//go:build exclude
+
 package main
 
 import (
@@ -7,7 +9,8 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Type-Safe Conditions Example ===\n")
+	fmt.Println("=== Type-Safe Conditions Example ===")
+	fmt.Println()
 
 	// Example 1: Type-safe string condition
 	fmt.Println("1. Type-safe string condition:")
@@ -49,26 +52,21 @@ func main() {
 	fmt.Printf("UPDATE SQL: %s\n", updateSQL)
 	fmt.Printf("UPDATE Args: %v\n\n", updateArgs)
 
-	// Example 5: Error handling for invalid types
-	fmt.Println("5. Error handling for invalid types:")
-	_, _, err := stk.Select("id").From("users").Where(123).Build()
-	if err != nil {
-		fmt.Printf("Expected error: %v\n\n", err)
-	}
+	// Example 5: Raw conditions now require AsCondition wrapper
+	fmt.Println("5. Raw conditions now require AsCondition wrapper:")
+	rawCond2 := stk.AsCondition(stk.Raw("id = 1"))
+	q5 := stk.Select("id").From("users").Where(rawCond2)
+	sql5, args5, _ := q5.Build()
+	fmt.Printf("SQL: %s\n", sql5)
+	fmt.Printf("Args: %v\n\n", args5)
 
-	// Example 6: String conditions now require explicit wrapper
-	fmt.Println("6. String conditions now require explicit wrapper:")
-	_, _, err = stk.Select("id").From("users").Where("active = ?", true).Build()
-	if err != nil {
-		fmt.Printf("Direct string condition error: %v\n", err)
-	}
-
-	// Correct way with NewStringCondition
-	stringCond2 := stk.NewStringCondition("active = ?", true)
-	legacyQ := stk.Select("id").From("users").Where(stringCond2)
-	legacySQL, legacyArgs, _ := legacyQ.Build()
-	fmt.Printf("Correct SQL: %s\n", legacySQL)
-	fmt.Printf("Correct Args: %v\n\n", legacyArgs)
+	// Example 6: Compile-time type safety
+	fmt.Println("6. Compile-time type safety:")
+	fmt.Println("   - Invalid types (like int) are caught at compile time")
+	fmt.Println("   - Raw SQL must be wrapped with AsCondition()")
+	fmt.Println("   - String conditions must use NewStringCondition()")
+	fmt.Println("   - This prevents runtime errors and improves safety")
+	fmt.Println()
 
 	// Example 7: Using in HAVING clause
 	fmt.Println("7. Using in HAVING clause:")

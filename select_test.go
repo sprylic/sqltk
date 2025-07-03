@@ -131,7 +131,7 @@ func TestSelectBuilder(t *testing.T) {
 
 func TestSelectBuilder_RawWhere(t *testing.T) {
 	t.Run("raw where only", func(t *testing.T) {
-		q := Select("id").From("users").Where(Raw("age > 18"))
+		q := Select("id").From("users").Where(AsCondition(Raw("age > 18")))
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id FROM users WHERE age > 18"
 		if err != nil {
@@ -146,7 +146,7 @@ func TestSelectBuilder_RawWhere(t *testing.T) {
 	})
 
 	t.Run("mixed parameterized and raw", func(t *testing.T) {
-		q := Select("id").From("users").Where(NewStringCondition("active = ?", true)).Where(Raw("age > 18"))
+		q := Select("id").From("users").Where(NewStringCondition("active = ?", true)).Where(AsCondition(Raw("age > 18")))
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id FROM users WHERE active = ? AND age > 18"
 		wantArgs := []interface{}{true}
@@ -162,10 +162,9 @@ func TestSelectBuilder_RawWhere(t *testing.T) {
 	})
 
 	t.Run("error on invalid type", func(t *testing.T) {
-		_, _, err := Select("id").From("users").Where(123).Build()
-		if err == nil {
-			t.Errorf("expected error, got none")
-		}
+		// This test demonstrates that the compiler will catch invalid types
+		// We can't test this at runtime since it's a compile-time error
+		t.Skip("This is now a compile-time error, not a runtime error")
 	})
 }
 
@@ -211,7 +210,7 @@ func TestSelectBuilder_GroupBy_Having_OrderBy(t *testing.T) {
 	})
 
 	t.Run("having raw", func(t *testing.T) {
-		q := Select("id").From("users").GroupBy("id").Having(Raw("COUNT(*) > 1"))
+		q := Select("id").From("users").GroupBy("id").Having(AsCondition(Raw("COUNT(*) > 1")))
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id FROM users GROUP BY id HAVING COUNT(*) > 1"
 		if err != nil {
@@ -277,10 +276,9 @@ func TestSelectBuilder_GroupBy_Having_OrderBy(t *testing.T) {
 	})
 
 	t.Run("error on invalid having type", func(t *testing.T) {
-		_, _, err := Select("id").From("users").Having(123).Build()
-		if err == nil {
-			t.Errorf("expected error, got none")
-		}
+		// This test demonstrates that the compiler will catch invalid types
+		// We can't test this at runtime since it's a compile-time error
+		t.Skip("This is now a compile-time error, not a runtime error")
 	})
 
 	t.Run("error on invalid order by type", func(t *testing.T) {
@@ -613,12 +611,9 @@ func TestSelectBuilder_Compose(t *testing.T) {
 	})
 
 	t.Run("compose propagates error", func(t *testing.T) {
-		bad := func(b *SelectBuilder) *SelectBuilder { return b.Where(123) }
-		q := Select("id").From("users").Compose(bad, isActive)
-		_, _, err := q.WithDialect(Standard()).Build()
-		if err == nil {
-			t.Errorf("expected error, got none")
-		}
+		// This test demonstrates that the compiler will catch invalid types
+		// We can't test this at runtime since it's a compile-time error
+		t.Skip("This is now a compile-time error, not a runtime error")
 	})
 }
 

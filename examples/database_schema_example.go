@@ -1,3 +1,5 @@
+//go:build exclude
+
 package main
 
 import (
@@ -163,5 +165,6 @@ func main() {
 	}
 	fmt.Printf("   Step 4 - Cleanup: %s\n", sql)
 
-	fmt.Println("\n=== End of Examples ===")
+	fmt.Println()
+	fmt.Println("=== End of Examples ===")
 }
