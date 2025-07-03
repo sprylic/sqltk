@@ -1,7 +1,8 @@
-package cqb
+package stk
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -120,33 +121,118 @@ func (b *SelectBuilder) OrderBy(expr interface{}) *SelectBuilder {
 type JoinBuilder struct {
 	parent    *SelectBuilder
 	joinType  string
-	joinTable string
+	joinTable interface{}
+	err       error
 }
 
-// Join starts an INNER JOIN clause. Call .On(left, right) to specify the ON condition.
-// Example: q := cqb.Select("u.id").From("users u").Join("orders o").On("o.user_id", "u.id")
-func (b *SelectBuilder) Join(table string) *JoinBuilder {
+// Join starts an INNER JOIN clause. Accepts a table, subquery, or alias.
+//   - string: table name (optionally with alias, e.g. "users u")
+//   - Raw: raw SQL for the table
+//   - *SelectBuilder: subquery as table
+//   - AliasExpr: alias for a table or subquery (use stk.Alias)
+//
+// Example usage:
+//
+//	Join("orders o")
+//	Join(stk.Alias("orders", "o"))
+//	Join(stk.Alias(stk.Select("id").From("orders"), "o"))
+func (b *SelectBuilder) Join(table interface{}) *JoinBuilder {
 	return &JoinBuilder{parent: b, joinType: "JOIN", joinTable: table}
 }
 
-// LeftJoin starts a LEFT JOIN clause. Call .On(left, right) to specify the ON condition.
-func (b *SelectBuilder) LeftJoin(table string) *JoinBuilder {
+// LeftJoin starts a LEFT JOIN clause. Accepts a table, subquery, or alias.
+//   - string: table name (optionally with alias)
+//   - Raw: raw SQL for the table
+//   - *SelectBuilder: subquery as table
+//   - AliasExpr: alias for a table or subquery (use stk.Alias)
+//
+// Example usage:
+//
+//	LeftJoin("orders o")
+//	LeftJoin(stk.Alias("orders", "o"))
+//	LeftJoin(stk.Alias(stk.Select("id").From("orders"), "o"))
+func (b *SelectBuilder) LeftJoin(table interface{}) *JoinBuilder {
 	return &JoinBuilder{parent: b, joinType: "LEFT JOIN", joinTable: table}
 }
 
-// RightJoin starts a RIGHT JOIN clause. Call .On(left, right) to specify the ON condition.
-func (b *SelectBuilder) RightJoin(table string) *JoinBuilder {
+// RightJoin starts a RIGHT JOIN clause. Accepts a table, subquery, or alias.
+//   - string: table name (optionally with alias)
+//   - Raw: raw SQL for the table
+//   - *SelectBuilder: subquery as table
+//   - AliasExpr: alias for a table or subquery (use stk.Alias)
+//
+// Example usage:
+//
+//	RightJoin("orders o")
+//	RightJoin(stk.Alias("orders", "o"))
+//	RightJoin(stk.Alias(stk.Select("id").From("orders"), "o"))
+func (b *SelectBuilder) RightJoin(table interface{}) *JoinBuilder {
 	return &JoinBuilder{parent: b, joinType: "RIGHT JOIN", joinTable: table}
 }
 
-// FullJoin starts a FULL JOIN clause. Call .On(left, right) to specify the ON condition.
-func (b *SelectBuilder) FullJoin(table string) *JoinBuilder {
+// FullJoin starts a FULL JOIN clause. Accepts a table, subquery, or alias.
+//   - string: table name (optionally with alias)
+//   - Raw: raw SQL for the table
+//   - *SelectBuilder: subquery as table
+//   - AliasExpr: alias for a table or subquery (use stk.Alias)
+//
+// Example usage:
+//
+//	FullJoin("orders o")
+//	FullJoin(stk.Alias("orders", "o"))
+//	FullJoin(stk.Alias(stk.Select("id").From("orders"), "o"))
+func (b *SelectBuilder) FullJoin(table interface{}) *JoinBuilder {
 	return &JoinBuilder{parent: b, joinType: "FULL JOIN", joinTable: table}
 }
 
 // On finalizes the JOIN ... ON ... clause and returns the parent SelectBuilder.
 func (jb *JoinBuilder) On(left, right string) *SelectBuilder {
-	clause := jb.joinType + " " + jb.joinTable + " ON " + left + " = " + right
+	if jb.err != nil {
+		jb.parent.whereClause.err = jb.err
+		return jb.parent
+	}
+
+	clause := jb.joinType + " "
+	dialect := jb.parent.dialect
+	if dialect == nil {
+		dialect = GetDialect()
+	}
+
+	switch t := jb.joinTable.(type) {
+	case string:
+		clause += dialect.QuoteIdent(t)
+	case Raw:
+		clause += string(t)
+	case *SelectBuilder:
+		subSQL, _, subErr := t.Build()
+		if subErr != nil {
+			jb.parent.whereClause.err = fmt.Errorf("join subquery error: %w", subErr)
+			return jb.parent
+		}
+		clause += "(" + subSQL + ")"
+	case AliasExpr:
+		switch expr := t.Expr.(type) {
+		case *SelectBuilder:
+			subSQL, _, subErr := expr.Build()
+			if subErr != nil {
+				jb.parent.whereClause.err = fmt.Errorf("join alias subquery error: %w", subErr)
+				return jb.parent
+			}
+			clause += "(" + subSQL + ") AS " + dialect.QuoteIdent(t.Alias)
+		case string:
+			clause += dialect.QuoteIdent(expr) + " AS " + dialect.QuoteIdent(t.Alias)
+		case Raw:
+			clause += string(expr) + " AS " + dialect.QuoteIdent(t.Alias)
+		default:
+			jb.parent.whereClause.err = fmt.Errorf("join alias: expr must be string, Raw, or *SelectBuilder (got %T)", expr)
+			return jb.parent
+		}
+	default:
+		jb.parent.whereClause.err = fmt.Errorf("join: table must be string, Raw, *SelectBuilder, or AliasExpr (got %T)", t)
+		return jb.parent
+	}
+
+	clause += " ON " + left + " = " + right
 	jb.parent.joinClauses = append(jb.parent.joinClauses, clause)
 	return jb.parent
 }
@@ -228,7 +314,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 			case AliasExpr:
 				switch expr := c.Expr.(type) {
 				case *SelectBuilder:
-					subSQL, subArgs, subErr := expr.Build()
+					subSQL, _, subErr := expr.Build()
 					if subErr != nil {
 						err = subErr
 					}
@@ -236,7 +322,6 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 					sb.WriteString(subSQL)
 					sb.WriteString(") AS ")
 					sb.WriteString(dialect.QuoteIdent(c.Alias))
-					args = append(args, subArgs...)
 				case string:
 					sb.WriteString(dialect.QuoteIdent(expr))
 					sb.WriteString(" AS ")
@@ -271,7 +356,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 	case AliasExpr:
 		switch expr := t.Expr.(type) {
 		case *SelectBuilder:
-			subSQL, subArgs, subErr := expr.Build()
+			subSQL, _, subErr := expr.Build()
 			if subErr != nil {
 				err = subErr
 			}
@@ -279,7 +364,6 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 			sb.WriteString(subSQL)
 			sb.WriteString(") AS ")
 			sb.WriteString(dialect.QuoteIdent(t.Alias))
-			args = append(args, subArgs...)
 		case string:
 			sb.WriteString(dialect.QuoteIdent(expr))
 			sb.WriteString(" AS ")

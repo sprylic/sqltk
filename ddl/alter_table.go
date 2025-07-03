@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sprylic/cqb/shared"
+	"github.com/sprylic/stk/shared"
 )
 
 // AlterTableBuilder builds SQL ALTER TABLE queries.

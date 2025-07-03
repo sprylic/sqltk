@@ -1,4 +1,4 @@
-module github.com/sprylic/cqb
+module github.com/sprylic/stk
 
 go 1.24
 

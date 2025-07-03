@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/sprylic/cqb/shared"
+	"github.com/sprylic/stk/shared"
 )
 
 // DropTableBuilder builds SQL DROP TABLE queries.

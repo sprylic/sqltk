@@ -1,7 +1,8 @@
-package cqb
+package stk
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -383,6 +384,30 @@ func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
 		}
 		if !reflect.DeepEqual(args, wantArgs) {
 			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("join with alias expr", func(t *testing.T) {
+		q := Select("u.id", "p.id").From(Alias("users", "u")).Join(Alias("posts", "p")).On("p.user_id", "u.id")
+		sql, _, err := q.WithDialect(Standard()).Build()
+		wantSQL := "SELECT u.id, p.id FROM users AS u JOIN posts AS p ON p.user_id = u.id"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+	})
+
+	t.Run("join error propagation", func(t *testing.T) {
+		// Test invalid join table type
+		q := Select("id").From("users").Join(123).On("user_id", "id")
+		_, _, err := q.Build()
+		if err == nil {
+			t.Error("expected error for invalid join table type")
+		}
+		if !strings.Contains(err.Error(), "join: table must be string, Raw, *SelectBuilder, or AliasExpr") {
+			t.Errorf("expected specific error message, got: %v", err)
 		}
 	})
 }

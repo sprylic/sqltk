@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sprylic/cqb/shared"
+	"github.com/sprylic/stk/shared"
 )
 
 // CreateTableBuilder builds SQL CREATE TABLE queries.

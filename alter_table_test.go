@@ -1,9 +1,9 @@
-package cqb
+package stk
 
 import (
 	"testing"
 
-	"github.com/sprylic/cqb/ddl"
+	"github.com/sprylic/stk/ddl"
 )
 
 func TestAlterTableBuilder(t *testing.T) {

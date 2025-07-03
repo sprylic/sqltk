@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sprylic/cqb/shared"
+	"github.com/sprylic/stk/shared"
 )
 
 // CreateViewBuilder builds CREATE VIEW statements.

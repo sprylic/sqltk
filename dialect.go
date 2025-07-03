@@ -1,6 +1,6 @@
-package cqb
+package stk
 
-import "github.com/sprylic/cqb/shared"
+import "github.com/sprylic/stk/shared"
 
 // Re-export shared types for backward compatibility
 type (
