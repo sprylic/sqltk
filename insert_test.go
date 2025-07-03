@@ -99,7 +99,7 @@ func TestPostgresInsertBuilder_Returning(t *testing.T) {
 	pq.InsertBuilder = pq.InsertBuilder.Columns("name", "age").Values("Alice", 30)
 	pq = pq.Returning("id", "age")
 	sql, args, err := pq.Build()
-	wantSQL := "INSERT INTO users (name, age) VALUES (?, ?) RETURNING id, age"
+	wantSQL := "INSERT INTO \"users\" (\"name\", \"age\") VALUES ($1, $2) RETURNING id, age"
 	wantArgs := []interface{}{"Alice", 30}
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -118,7 +118,7 @@ func TestPostgresInsertBuilder_PGJSON(t *testing.T) {
 	pq.InsertBuilder = pq.InsertBuilder.Columns("name", "data").Values("Alice", PGJSON{jsonVal})
 	pq = pq.Returning("id")
 	sql, args, err := pq.Build()
-	wantSQL := "INSERT INTO users (name, data) VALUES (?, ?) RETURNING id"
+	wantSQL := "INSERT INTO \"users\" (\"name\", \"data\") VALUES ($1, $2) RETURNING id"
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestPostgresInsertBuilder_PGArray(t *testing.T) {
 	pq.InsertBuilder = pq.InsertBuilder.Columns("tags").Values(PGArray{arrVal})
 	pq = pq.Returning("id")
 	sql, args, err := pq.Build()
-	wantSQL := "INSERT INTO users (tags) VALUES (?) RETURNING id"
+	wantSQL := "INSERT INTO \"users\" (\"tags\") VALUES ($1) RETURNING id"
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
