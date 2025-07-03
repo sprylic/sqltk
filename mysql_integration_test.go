@@ -52,7 +52,15 @@ func TestMySQLIntegration(t *testing.T) {
 	// Connect to the test database
 	testDSN := dsn
 	if idx := strings.LastIndex(testDSN, "/"); idx != -1 {
-		testDSN = testDSN[:idx+1] + testDBName + testDSN[idx+1+len("mysql"):]
+		// Check if there's already a database name after the last /
+		afterSlash := testDSN[idx+1:]
+		if afterSlash == "" {
+			// No database name, just add the test database
+			testDSN = testDSN + testDBName
+		} else {
+			// There's already a database name, replace it
+			testDSN = testDSN[:idx+1] + testDBName
+		}
 	} else {
 		testDSN += "/" + testDBName
 	}
