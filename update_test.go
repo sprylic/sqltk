@@ -73,6 +73,48 @@ func TestUpdateBuilder(t *testing.T) {
 		}
 	})
 
+	t.Run("where with condition builder", func(t *testing.T) {
+		cond := NewCond().
+			Equal("active", true).
+			And(NewCond().GreaterThan("age", 18)).
+			And(NewCond().In("status", "active", "pending"))
+
+		q := Update("users").Set("name", "Alice").Where(cond)
+		sql, args, err := q.Build()
+		wantSQL := "UPDATE users SET name = ? WHERE active = ? AND age > ? AND status IN (?, ?)"
+		wantArgs := []interface{}{"Alice", true, 18, "active", "pending"}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("where with complex condition builder", func(t *testing.T) {
+		cond := NewCond().
+			Equal("active", true).
+			Or(NewCond().Equal("vip", true)).
+			And(NewCond().GreaterThan("age", 16))
+
+		q := Update("users").Set("name", "Alice").Where(cond)
+		sql, args, err := q.Build()
+		wantSQL := "UPDATE users SET name = ? WHERE (active = ?) OR (vip = ?) AND age > ?"
+		wantArgs := []interface{}{"Alice", true, true, 16}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
 	t.Run("where equal", func(t *testing.T) {
 		q := Update("users").Set("active", true).WhereEqual("id", 1)
 		sql, args, err := q.Build()

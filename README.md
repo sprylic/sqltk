@@ -64,6 +64,49 @@ sql, args, err := q.Build()
 // args: [true, 18]
 ```
 
+### Condition Builder (NewCond)
+
+The `ConditionBuilder` provides a fluent, composable API for building complex SQL conditions without resorting to raw SQL. Use `NewCond()` to start a condition chain, and pass it to `.Where()` or `.Having()` in any builder (`Select`, `Update`, `Delete`).
+
+**Examples:**
+
+```go
+// SELECT with complex condition
+cond := stk.NewCond().
+    Equal("active", true).
+    And(stk.NewCond().GreaterThan("age", 18)).
+    And(stk.NewCond().In("status", "active", "pending"))
+q := stk.Select("id", "name").From("users").Where(cond)
+sql, args, err := q.Build()
+// sql: "SELECT `id`, `name` FROM `users` WHERE active = ? AND age > ? AND status IN (?, ?)"
+// args: [true, 18, "active", "pending"]
+
+// UPDATE with condition builder
+cond := stk.NewCond().
+    Equal("active", true).
+    Or(stk.NewCond().Equal("vip", true)).
+    And(stk.NewCond().GreaterThan("age", 16))
+q := stk.Update("users").Set("name", "Alice").Where(cond)
+sql, args, err := q.Build()
+// sql: "UPDATE `users` SET `name` = ? WHERE (active = ?) OR (vip = ?) AND age > ?"
+// args: ["Alice", true, true, 16]
+
+// DELETE with condition builder
+cond := stk.NewCond().
+    Equal("active", false).
+    Or(stk.NewCond().IsNull("deleted_at"))
+q := stk.Delete("users").Where(cond)
+sql, args, err := q.Build()
+// sql: "DELETE FROM `users` WHERE (active = ?) OR (deleted_at IS NULL)"
+// args: [false]
+```
+
+**Supported condition methods:**
+- `Equal`, `NotEqual`, `GreaterThan`, `LessThan`, `GreaterThanOrEqual`, `LessThanOrEqual`
+- `In`, `NotIn`, `Between`, `NotBetween`, `IsNull`, `IsNotNull`, `Like`, `NotLike`
+- `Exists`, `NotExists`, `Case`, `And`, `Or`
+- All methods are chainable and support table-qualified columns and dialect quoting.
+
 ### INSERT
 ```go
 q := stk.Insert("users").Columns("id", "name").Values(1, "Alice").Values(2, "Bob")
