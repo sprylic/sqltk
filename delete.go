@@ -57,7 +57,7 @@ func (b *DeleteBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = getDialect()
+		dialect = GetDialect()
 	}
 	placeholderIdx := 1
 

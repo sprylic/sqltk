@@ -1,27 +1,23 @@
-package cqb
+package ddl
 
 import (
 	"errors"
 	"fmt"
 	"strings"
-)
 
-// Option represents a table option with name and value.
-type Option struct {
-	Name  string
-	Value string
-}
+	"github.com/sprylic/cqb/shared"
+)
 
 // CreateTableBuilder builds SQL CREATE TABLE queries.
 type CreateTableBuilder struct {
 	tableName   string
 	columns     []ColumnDef
 	constraints []Constraint
-	options     []Option // ENGINE, CHARSET, etc. in order
+	options     []TableOption // ENGINE, CHARSET, etc. in order
 	ifNotExists bool
 	temporary   bool
 	err         error
-	dialect     Dialect
+	dialect     shared.Dialect
 }
 
 // CreateTable creates a new CreateTableBuilder for the given table.
@@ -31,7 +27,7 @@ func CreateTable(tableName string) *CreateTableBuilder {
 	}
 	return &CreateTableBuilder{
 		tableName: tableName,
-		options:   make([]Option, 0),
+		options:   make([]TableOption, 0),
 	}
 }
 
@@ -81,15 +77,6 @@ func (b *CreateTableBuilder) AddColumnWithType(name, typ string) *CreateTableBui
 	if b.err != nil {
 		return b
 	}
-	if name == "" {
-		b.err = errors.New("column name is required")
-		return b
-	}
-	if typ == "" {
-		b.err = errors.New("column type is required")
-		return b
-	}
-
 	col := ColumnDef{
 		Name: name,
 		Type: strings.ToUpper(typ),
@@ -99,18 +86,14 @@ func (b *CreateTableBuilder) AddColumnWithType(name, typ string) *CreateTableBui
 }
 
 // Convenience methods for common column types
-
-// Int adds an INT column.
 func (b *CreateTableBuilder) Int(name string) *CreateTableBuilder {
 	return b.AddColumnWithType(name, "INT")
 }
 
-// BigInt adds a BIGINT column.
 func (b *CreateTableBuilder) BigInt(name string) *CreateTableBuilder {
 	return b.AddColumnWithType(name, "BIGINT")
 }
 
-// Varchar adds a VARCHAR column with the specified size.
 func (b *CreateTableBuilder) Varchar(name string, size int) *CreateTableBuilder {
 	if b.err != nil {
 		return b
@@ -129,27 +112,22 @@ func (b *CreateTableBuilder) Varchar(name string, size int) *CreateTableBuilder 
 	return b
 }
 
-// Text adds a TEXT column.
 func (b *CreateTableBuilder) Text(name string) *CreateTableBuilder {
 	return b.AddColumnWithType(name, "TEXT")
 }
 
-// Boolean adds a BOOLEAN column.
 func (b *CreateTableBuilder) Boolean(name string) *CreateTableBuilder {
 	return b.AddColumnWithType(name, "BOOLEAN")
 }
 
-// Timestamp adds a TIMESTAMP column.
 func (b *CreateTableBuilder) Timestamp(name string) *CreateTableBuilder {
 	return b.AddColumnWithType(name, "TIMESTAMP")
 }
 
-// DateTime adds a DATETIME column.
 func (b *CreateTableBuilder) DateTime(name string) *CreateTableBuilder {
 	return b.AddColumnWithType(name, "DATETIME")
 }
 
-// Decimal adds a DECIMAL column with precision and scale.
 func (b *CreateTableBuilder) Decimal(name string, precision, scale int) *CreateTableBuilder {
 	if b.err != nil {
 		return b
@@ -282,7 +260,7 @@ func (cb *ColumnBuilder) Comment(comment string) *ColumnBuilder {
 	return cb
 }
 
-// IfNotExists adds IF NOT EXISTS to the CREATE TABLE statement.
+// Table-level options
 func (b *CreateTableBuilder) IfNotExists() *CreateTableBuilder {
 	if b.err != nil {
 		return b
@@ -291,7 +269,6 @@ func (b *CreateTableBuilder) IfNotExists() *CreateTableBuilder {
 	return b
 }
 
-// Temporary creates a temporary table.
 func (b *CreateTableBuilder) Temporary() *CreateTableBuilder {
 	if b.err != nil {
 		return b
@@ -300,43 +277,39 @@ func (b *CreateTableBuilder) Temporary() *CreateTableBuilder {
 	return b
 }
 
-// Engine sets the table engine (MySQL).
 func (b *CreateTableBuilder) Engine(engine string) *CreateTableBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.options = append(b.options, Option{Name: "ENGINE", Value: engine})
+	b.options = append(b.options, TableOption{Name: "ENGINE", Value: engine})
 	return b
 }
 
-// Charset sets the table character set.
 func (b *CreateTableBuilder) Charset(charset string) *CreateTableBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.options = append(b.options, Option{Name: "CHARACTER SET", Value: charset})
+	b.options = append(b.options, TableOption{Name: "CHARACTER SET", Value: charset})
 	return b
 }
 
-// Collation sets the table collation.
 func (b *CreateTableBuilder) Collation(collation string) *CreateTableBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.options = append(b.options, Option{Name: "COLLATE", Value: collation})
+	b.options = append(b.options, TableOption{Name: "COLLATE", Value: collation})
 	return b
 }
 
-// Comment sets the table comment.
 func (b *CreateTableBuilder) Comment(comment string) *CreateTableBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.options = append(b.options, Option{Name: "COMMENT", Value: comment})
+	b.options = append(b.options, TableOption{Name: "COMMENT", Value: comment})
 	return b
 }
 
-// PrimaryKeyType adds a primary key constraint.
+// Constraint methods
 func (b *CreateTableBuilder) PrimaryKey(columns ...string) *CreateTableBuilder {
 	if b.err != nil {
 		return b
@@ -352,9 +325,12 @@ func (b *CreateTableBuilder) PrimaryKey(columns ...string) *CreateTableBuilder {
 	return b
 }
 
-// UniqueType adds a unique constraint.
 func (b *CreateTableBuilder) Unique(name string, columns ...string) *CreateTableBuilder {
 	if b.err != nil {
+		return b
+	}
+	if name == "" {
+		b.err = errors.New("unique constraint name is required")
 		return b
 	}
 	if len(columns) == 0 {
@@ -369,9 +345,12 @@ func (b *CreateTableBuilder) Unique(name string, columns ...string) *CreateTable
 	return b
 }
 
-// CheckType adds a check constraint.
 func (b *CreateTableBuilder) Check(name, expr string) *CreateTableBuilder {
 	if b.err != nil {
+		return b
+	}
+	if name == "" {
+		b.err = errors.New("check constraint name is required")
 		return b
 	}
 	if expr == "" {
@@ -386,13 +365,16 @@ func (b *CreateTableBuilder) Check(name, expr string) *CreateTableBuilder {
 	return b
 }
 
-// IndexType adds an index.
 func (b *CreateTableBuilder) Index(name string, columns ...string) *CreateTableBuilder {
 	if b.err != nil {
 		return b
 	}
+	if name == "" {
+		b.err = errors.New("index name is required")
+		return b
+	}
 	if len(columns) == 0 {
-		b.err = errors.New("index must specify at least one column")
+		b.err = errors.New("at least one column is required for index")
 		return b
 	}
 	b.constraints = append(b.constraints, Constraint{
@@ -403,7 +385,7 @@ func (b *CreateTableBuilder) Index(name string, columns ...string) *CreateTableB
 	return b
 }
 
-// ForeignKeyBuilder builds a foreign key constraint.
+// ForeignKeyBuilder builds foreign key constraints.
 type ForeignKeyBuilder struct {
 	parent     *CreateTableBuilder
 	constraint Constraint
@@ -427,7 +409,7 @@ func ForeignKey(name string, columns ...string) *ForeignKeyBuilder {
 	}
 }
 
-// ForeignKeyType starts building a foreign key constraint.
+// ForeignKey starts building a foreign key constraint.
 func (b *CreateTableBuilder) ForeignKey(name string, columns ...string) *ForeignKeyBuilder {
 	if b.err != nil {
 		return &ForeignKeyBuilder{parent: b, err: b.err}
@@ -522,7 +504,7 @@ func (b *CreateTableBuilder) AddForeignKey(fkb *ForeignKeyBuilder) *CreateTableB
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *CreateTableBuilder) WithDialect(d Dialect) *CreateTableBuilder {
+func (b *CreateTableBuilder) WithDialect(d shared.Dialect) *CreateTableBuilder {
 	if b.err != nil {
 		return b
 	}
@@ -544,7 +526,7 @@ func (b *CreateTableBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = getDialect()
+		dialect = shared.GetDialect() // Use global dialect instead of defaulting to MySQL
 	}
 
 	var sb strings.Builder
@@ -609,7 +591,7 @@ func (b *CreateTableBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *CreateTableBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return InterpolateSQL(sql, args)
+	return shared.InterpolateSQL(sql, args)
 }
 
 // Column constraint methods that can be chained after convenience methods

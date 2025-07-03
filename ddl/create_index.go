@@ -1,54 +1,54 @@
-package cqb
+package ddl
 
 import (
 	"errors"
 	"strings"
+
+	"github.com/sprylic/cqb/shared"
 )
 
-// CreateIndexBuilder builds CREATE INDEX statements.
+// CreateIndexBuilder builds SQL CREATE INDEX queries.
 type CreateIndexBuilder struct {
 	indexName   string
 	tableName   string
 	columns     []string
 	unique      bool
 	ifNotExists bool
-	dialect     Dialect
 	err         error
+	dialect     shared.Dialect
 }
 
-// CreateIndex starts building a CREATE INDEX statement.
-func CreateIndex(indexName string) *CreateIndexBuilder {
+// CreateIndex creates a new CreateIndexBuilder for the given index and table.
+func CreateIndex(indexName, tableName string) *CreateIndexBuilder {
 	if indexName == "" {
 		return &CreateIndexBuilder{err: errors.New("index name is required")}
 	}
+	if tableName == "" {
+		return &CreateIndexBuilder{err: errors.New("table name is required")}
+	}
 	return &CreateIndexBuilder{
 		indexName: indexName,
+		tableName: tableName,
+		columns:   make([]string, 0),
 	}
 }
 
-// On sets the table name for the index.
-func (b *CreateIndexBuilder) On(tableName string) *CreateIndexBuilder {
-	if b.err != nil {
-		return b
-	}
-	if tableName == "" {
-		b.err = errors.New("table name is required")
-		return b
-	}
-	b.tableName = tableName
-	return b
-}
-
-// Columns sets the columns for the index.
+// Columns adds columns to the index.
 func (b *CreateIndexBuilder) Columns(columns ...string) *CreateIndexBuilder {
 	if b.err != nil {
 		return b
 	}
 	if len(columns) == 0 {
-		b.err = errors.New("at least one column must be specified")
+		b.err = errors.New("at least one column is required")
 		return b
 	}
-	b.columns = columns
+	for _, col := range columns {
+		if col == "" {
+			b.err = errors.New("column name cannot be empty")
+			return b
+		}
+	}
+	b.columns = append(b.columns, columns...)
 	return b
 }
 
@@ -61,7 +61,7 @@ func (b *CreateIndexBuilder) Unique() *CreateIndexBuilder {
 	return b
 }
 
-// IfNotExists adds IF NOT EXISTS to the statement.
+// IfNotExists adds IF NOT EXISTS to the CREATE INDEX statement.
 func (b *CreateIndexBuilder) IfNotExists() *CreateIndexBuilder {
 	if b.err != nil {
 		return b
@@ -71,7 +71,7 @@ func (b *CreateIndexBuilder) IfNotExists() *CreateIndexBuilder {
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *CreateIndexBuilder) WithDialect(d Dialect) *CreateIndexBuilder {
+func (b *CreateIndexBuilder) WithDialect(d shared.Dialect) *CreateIndexBuilder {
 	if b.err != nil {
 		return b
 	}
@@ -91,43 +91,37 @@ func (b *CreateIndexBuilder) Build() (string, []interface{}, error) {
 		return "", nil, errors.New("table name is required")
 	}
 	if len(b.columns) == 0 {
-		return "", nil, errors.New("at least one column must be specified")
+		return "", nil, errors.New("at least one column is required")
 	}
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = getDialect()
+		dialect = shared.GetDialect() // Use global dialect instead of defaulting to MySQL
 	}
 
 	var sb strings.Builder
 	args := []interface{}{}
 
-	// CREATE [UNIQUE] INDEX
+	// CREATE INDEX
 	sb.WriteString("CREATE ")
 	if b.unique {
 		sb.WriteString("UNIQUE ")
 	}
 	sb.WriteString("INDEX ")
-
-	// IF NOT EXISTS
 	if b.ifNotExists {
 		sb.WriteString("IF NOT EXISTS ")
 	}
-
-	// Index name
 	sb.WriteString(dialect.QuoteIdent(b.indexName))
-
-	// ON table
 	sb.WriteString(" ON ")
 	sb.WriteString(dialect.QuoteIdent(b.tableName))
 
 	// Columns
-	sb.WriteString(" (")
-	quotedColumns := make([]string, len(b.columns))
+	quotedCols := make([]string, len(b.columns))
 	for i, col := range b.columns {
-		quotedColumns[i] = dialect.QuoteIdent(col)
+		quotedCols[i] = dialect.QuoteIdent(col)
 	}
-	sb.WriteString(strings.Join(quotedColumns, ", "))
+	sb.WriteString(" (")
+	sb.WriteString(strings.Join(quotedCols, ", "))
 	sb.WriteString(")")
 
 	return sb.String(), args, nil
@@ -137,5 +131,5 @@ func (b *CreateIndexBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *CreateIndexBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return InterpolateSQL(sql, args)
+	return shared.InterpolateSQL(sql, args)
 }

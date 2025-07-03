@@ -5,9 +5,6 @@ import (
 	"strings"
 )
 
-// Raw marks a string as raw SQL to be included directly in the query.
-type Raw string
-
 // SelectBuilder builds SQL SELECT queries.
 type SelectBuilder struct {
 	tableClauseInterface
@@ -199,7 +196,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = getDialect()
+		dialect = GetDialect()
 	}
 	placeholderIdx := 1
 
