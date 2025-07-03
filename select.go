@@ -314,7 +314,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 			case AliasExpr:
 				switch expr := c.Expr.(type) {
 				case *SelectBuilder:
-					subSQL, _, subErr := expr.Build()
+					subSQL, subArgs, subErr := expr.Build()
 					if subErr != nil {
 						err = subErr
 					}
@@ -322,6 +322,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 					sb.WriteString(subSQL)
 					sb.WriteString(") AS ")
 					sb.WriteString(dialect.QuoteIdent(c.Alias))
+					args = append(args, subArgs...)
 				case string:
 					sb.WriteString(dialect.QuoteIdent(expr))
 					sb.WriteString(" AS ")
@@ -356,7 +357,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 	case AliasExpr:
 		switch expr := t.Expr.(type) {
 		case *SelectBuilder:
-			subSQL, _, subErr := expr.Build()
+			subSQL, subArgs, subErr := expr.Build()
 			if subErr != nil {
 				err = subErr
 			}
@@ -364,6 +365,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 			sb.WriteString(subSQL)
 			sb.WriteString(") AS ")
 			sb.WriteString(dialect.QuoteIdent(t.Alias))
+			args = append(args, subArgs...)
 		case string:
 			sb.WriteString(dialect.QuoteIdent(expr))
 			sb.WriteString(" AS ")
