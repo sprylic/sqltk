@@ -2,6 +2,7 @@ package stk
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -296,7 +297,7 @@ func TestConditionBuilder_Null(t *testing.T) {
 
 func TestConditionBuilder_Exists(t *testing.T) {
 	t.Run("exists subquery", func(t *testing.T) {
-		subq := Select("1").From("orders").Where("orders.user_id = users.id")
+		subq := Select("1").From("orders").Where(NewStringCondition("orders.user_id = users.id"))
 		cond := NewCond().Exists(subq)
 		sql, args, err := cond.Build()
 		wantSQL := "EXISTS (SELECT 1 FROM orders WHERE orders.user_id = users.id)"
@@ -312,7 +313,7 @@ func TestConditionBuilder_Exists(t *testing.T) {
 	})
 
 	t.Run("not exists subquery", func(t *testing.T) {
-		subq := Select("1").From("deleted_users").Where("deleted_users.id = users.id")
+		subq := Select("1").From("deleted_users").Where(NewStringCondition("deleted_users.id = users.id"))
 		cond := NewCond().NotExists(subq)
 		sql, args, err := cond.Build()
 		wantSQL := "NOT EXISTS (SELECT 1 FROM deleted_users WHERE deleted_users.id = users.id)"
@@ -527,6 +528,142 @@ func TestConditionBuilder_String(t *testing.T) {
 		wantStr := "name = 'john' AND age > 18"
 		if debugStr != wantStr {
 			t.Errorf("got debug string %q, want %q", debugStr, wantStr)
+		}
+	})
+}
+
+func TestConditionInterface(t *testing.T) {
+	t.Run("string condition", func(t *testing.T) {
+		cond := NewStringCondition("active = ? AND age > ?", true, 18)
+		sql, args, err := cond.BuildCondition()
+		wantSQL := "active = ? AND age > ?"
+		wantArgs := []interface{}{true, 18}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("raw condition", func(t *testing.T) {
+		cond := NewRawCondition(Raw("id = 1"))
+		sql, args, err := cond.BuildCondition()
+		wantSQL := "id = 1"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("condition builder as condition", func(t *testing.T) {
+		cond := NewCond().Equal("active", true).And(NewCond().GreaterThan("age", 18))
+		sql, args, err := cond.BuildCondition()
+		wantSQL := "active = ? AND age > ?"
+		wantArgs := []interface{}{true, 18}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+}
+
+func TestTypeSafeWhere(t *testing.T) {
+	t.Run("where with string condition", func(t *testing.T) {
+		cond := NewStringCondition("active = ? AND age > ?", true, 18)
+		q := Select("id").From("users").Where(cond)
+		sql, args, err := q.Build()
+		wantSQL := "SELECT id FROM users WHERE active = ? AND age > ?"
+		wantArgs := []interface{}{true, 18}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("where with raw condition", func(t *testing.T) {
+		cond := NewRawCondition(Raw("id = 1"))
+		q := Select("id").From("users").Where(cond)
+		sql, args, err := q.Build()
+		wantSQL := "SELECT id FROM users WHERE id = 1"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("where with condition builder", func(t *testing.T) {
+		cond := NewCond().Equal("active", true).And(NewCond().GreaterThan("age", 18))
+		q := Select("id").From("users").Where(cond)
+		sql, args, err := q.Build()
+		wantSQL := "SELECT id FROM users WHERE active = ? AND age > ?"
+		wantArgs := []interface{}{true, 18}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("string where now requires NewStringCondition", func(t *testing.T) {
+		_, _, err := Select("id").From("users").Where("active = ? AND age > ?", true, 18).Build()
+		if err == nil {
+			t.Errorf("expected error for direct string condition, got none")
+		}
+		if !strings.Contains(err.Error(), "Use NewStringCondition() for string conditions") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("legacy raw where still works", func(t *testing.T) {
+		q := Select("id").From("users").Where(Raw("id = 1"))
+		sql, args, err := q.Build()
+		wantSQL := "SELECT id FROM users WHERE id = 1"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("error on invalid type", func(t *testing.T) {
+		_, _, err := Select("id").From("users").Where(123).Build()
+		if err == nil {
+			t.Errorf("expected error for invalid type, got none")
+		}
+		if !strings.Contains(err.Error(), "Use NewStringCondition() for string conditions") {
+			t.Errorf("unexpected error message: %v", err)
 		}
 	})
 }

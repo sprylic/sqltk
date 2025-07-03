@@ -11,7 +11,7 @@ func init() {
 
 func TestUpdateBuilder(t *testing.T) {
 	t.Run("basic update", func(t *testing.T) {
-		q := Update("users").Set("name", "Alice").Where("id = ?", 1)
+		q := Update("users").Set("name", "Alice").Where(NewStringCondition("id = ?", 1))
 		sql, args, err := q.Build()
 		wantSQL := "UPDATE users SET name = ? WHERE id = ?"
 		wantArgs := []interface{}{"Alice", 1}
@@ -27,7 +27,7 @@ func TestUpdateBuilder(t *testing.T) {
 	})
 
 	t.Run("multiple sets", func(t *testing.T) {
-		q := Update("users").Set("name", "Alice").Set("age", 30).Where("id = ?", 1)
+		q := Update("users").Set("name", "Alice").Set("age", 30).Where(NewStringCondition("id = ?", 1))
 		sql, args, err := q.Build()
 		wantSQL := "UPDATE users SET name = ?, age = ? WHERE id = ?"
 		wantArgs := []interface{}{"Alice", 30, 1}
@@ -174,7 +174,7 @@ func TestUpdateBuilder(t *testing.T) {
 
 func TestPostgresUpdateBuilder_Returning(t *testing.T) {
 	pq := NewPostgresUpdate("users")
-	pq.UpdateBuilder = pq.UpdateBuilder.Set("name", "Alice").Where("id = ?", 1)
+	pq.UpdateBuilder = pq.UpdateBuilder.Set("name", "Alice").Where(NewStringCondition("id = ?", 1))
 	pq = pq.Returning("id", "name")
 	sql, args, err := pq.Build()
 	wantSQL := "UPDATE users SET name = ? WHERE id = ? RETURNING id, name"

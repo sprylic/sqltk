@@ -18,41 +18,44 @@ func (w *whereClause) Where(cond interface{}, args ...interface{}) {
 	if w.err != nil {
 		return
 	}
-	switch c := cond.(type) {
-	case Raw:
-		w.whereRaw = append(w.whereRaw, string(c))
-	case string:
-		w.whereParam = append(w.whereParam, c)
-		w.whereArgs = append(w.whereArgs, args...)
-	case *ConditionBuilder:
-		sql, condArgs, err := c.Build()
+
+	// Handle Condition interface
+	if condition, ok := cond.(Condition); ok {
+		sql, condArgs, err := condition.BuildCondition()
 		if err != nil {
-			w.err = fmt.Errorf("Where: condition builder error: %w", err)
+			w.err = fmt.Errorf("Where: condition error: %w", err)
 			return
 		}
 		if sql != "" {
 			w.whereParam = append(w.whereParam, sql)
 			w.whereArgs = append(w.whereArgs, condArgs...)
 		}
-	default:
-		w.err = fmt.Errorf("Where: cond must be string, sq.Raw, or *ConditionBuilder (got type %T)", cond)
+		return
 	}
+
+	// Handle legacy Raw type for backward compatibility
+	if raw, ok := cond.(Raw); ok {
+		w.whereRaw = append(w.whereRaw, string(raw))
+		return
+	}
+
+	w.err = fmt.Errorf("Where: cond must be Condition or Raw (got type %T). Use NewStringCondition() for string conditions", cond)
 }
 
 func (w *whereClause) WhereEqual(column string, value interface{}) {
 	if value == nil {
-		w.Where(column + " IS NULL")
+		w.Where(NewStringCondition(column + " IS NULL"))
 		return
 	}
-	w.Where(column+" = ?", value)
+	w.Where(NewStringCondition(column+" = ?", value))
 }
 
 func (w *whereClause) WhereNotEqual(column string, value interface{}) {
 	if value == nil {
-		w.Where(column + " IS NOT NULL")
+		w.Where(NewStringCondition(column + " IS NOT NULL"))
 		return
 	}
-	w.Where(column+" != ?", value)
+	w.Where(NewStringCondition(column+" != ?", value))
 }
 
 func (w *whereClause) buildWhereSQL(dialect Dialect, placeholderIdx *int) (string, []interface{}) {

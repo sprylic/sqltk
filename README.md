@@ -68,6 +68,24 @@ sql, args, err := q.Build()
 
 The `ConditionBuilder` provides a fluent, composable API for building complex SQL conditions without resorting to raw SQL. Use `NewCond()` to start a condition chain, and pass it to `.Where()` or `.Having()` in any builder (`Select`, `Update`, `Delete`).
 
+**Type-Safe Conditions:**
+
+The library now provides a `Condition` interface for type-safe condition handling. This prevents unsafe queries and makes the API more explicit:
+
+```go
+// Type-safe string condition
+cond := stk.NewStringCondition("active = ? AND age > ?", true, 18)
+q := stk.Select("id").From("users").Where(cond)
+
+// Type-safe raw condition
+cond := stk.NewRawCondition(stk.Raw("id = 1"))
+q := stk.Select("id").From("users").Where(cond)
+
+// ConditionBuilder (implements Condition interface)
+cond := stk.NewCond().Equal("active", true).And(stk.NewCond().GreaterThan("age", 18))
+q := stk.Select("id").From("users").Where(cond)
+```
+
 **Examples:**
 
 ```go
@@ -106,6 +124,19 @@ sql, args, err := q.Build()
 - `In`, `NotIn`, `Between`, `NotBetween`, `IsNull`, `IsNotNull`, `Like`, `NotLike`
 - `Exists`, `NotExists`, `Case`, `And`, `Or`
 - All methods are chainable and support table-qualified columns and dialect quoting.
+
+**Type Safety:**
+String conditions must now use explicit wrappers to prevent SQL injection:
+```go
+// ❌ This will now cause an error
+q := stk.Select("id").From("users").Where("active = ?", true)
+
+// ✅ Use explicit wrapper for string conditions
+q := stk.Select("id").From("users").Where(stk.NewStringCondition("active = ?", true))
+
+// ✅ Raw conditions still work (explicitly marked as raw)
+q := stk.Select("id").From("users").Where(stk.Raw("id = 1"))
+```
 
 ### INSERT
 ```go

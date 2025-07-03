@@ -277,7 +277,7 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 		q := Select("u.name", "COUNT(o.id) as order_count", "SUM(o.amount) as total_amount").
 			From(Alias("users", "u")).
 			LeftJoin("orders o").On("o.user_id", "u.id").
-			Where("o.amount > " + string(subq)).
+			Where(NewStringCondition("o.amount > " + string(subq))).
 			GroupBy("u.name").
 			OrderBy("total_amount DESC")
 
@@ -319,7 +319,7 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 		q := Update("users").
 			Set("age", 26).
 			Set("updated_at", Raw("NOW()")).
-			Where("name = ?", "Bob")
+			Where(NewStringCondition("name = ?", "Bob"))
 
 		sqlStr, args, err := q.WithDialect(Postgres()).Build()
 		if err != nil {
@@ -352,7 +352,7 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 		}
 
 		// Delete with RETURNING
-		q := Delete("users").Where("name = ?", "Charlie")
+		q := Delete("users").Where(NewStringCondition("name = ?", "Charlie"))
 
 		sqlStr, args, err := q.WithDialect(Postgres()).Build()
 		if err != nil {

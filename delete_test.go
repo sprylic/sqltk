@@ -11,7 +11,7 @@ func init() {
 
 func TestDeleteBuilder(t *testing.T) {
 	t.Run("basic delete", func(t *testing.T) {
-		q := Delete("users").Where("id = ?", 1)
+		q := Delete("users").Where(NewStringCondition("id = ?", 1))
 		sql, args, err := q.Build()
 		wantSQL := "DELETE FROM users WHERE id = ?"
 		wantArgs := []interface{}{1}
@@ -63,7 +63,7 @@ func TestDeleteBuilder(t *testing.T) {
 	})
 
 	t.Run("delete with exists condition", func(t *testing.T) {
-		subq := Select("1").From("orders").Where("orders.user_id = users.id")
+		subq := Select("1").From("orders").Where(NewStringCondition("orders.user_id = users.id"))
 		cond := NewCond().Exists(subq)
 
 		q := Delete("users").Where(cond)
@@ -113,7 +113,7 @@ func TestDeleteBuilder(t *testing.T) {
 	})
 
 	t.Run("error on missing table", func(t *testing.T) {
-		q := Delete("").Where("id = ?", 1)
+		q := Delete("").Where(NewStringCondition("id = ?", 1))
 		_, _, err := q.Build()
 		if err == nil {
 			t.Errorf("expected error, got none")
@@ -131,7 +131,7 @@ func TestDeleteBuilder(t *testing.T) {
 
 func TestPostgresDeleteBuilder_Returning(t *testing.T) {
 	pq := NewPostgresDelete("users")
-	pq.DeleteBuilder = pq.DeleteBuilder.Where("id = ?", 1)
+	pq.DeleteBuilder = pq.DeleteBuilder.Where(NewStringCondition("id = ?", 1))
 	pq = pq.Returning("id")
 	sql, args, err := pq.Build()
 	wantSQL := "DELETE FROM users WHERE id = ? RETURNING id"

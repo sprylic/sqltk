@@ -23,7 +23,7 @@ func TestSelectBuilder(t *testing.T) {
 	})
 
 	t.Run("select with where", func(t *testing.T) {
-		q := Select("id").From("users").Where("active = ?", true)
+		q := Select("id").From("users").Where(NewStringCondition("active = ?", true))
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id FROM users WHERE active = ?"
 		wantArgs := []interface{}{true}
@@ -113,7 +113,7 @@ func TestSelectBuilder(t *testing.T) {
 	})
 
 	t.Run("multiple where clauses", func(t *testing.T) {
-		q := Select("id").From("users").Where("active = ?", true).Where("age > ?", 18)
+		q := Select("id").From("users").Where(NewStringCondition("active = ?", true)).Where(NewStringCondition("age > ?", 18))
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id FROM users WHERE active = ? AND age > ?"
 		wantArgs := []interface{}{true, 18}
@@ -146,7 +146,7 @@ func TestSelectBuilder_RawWhere(t *testing.T) {
 	})
 
 	t.Run("mixed parameterized and raw", func(t *testing.T) {
-		q := Select("id").From("users").Where("active = ?", true).Where(Raw("age > 18"))
+		q := Select("id").From("users").Where(NewStringCondition("active = ?", true)).Where(Raw("age > 18"))
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id FROM users WHERE active = ? AND age > 18"
 		wantArgs := []interface{}{true}
@@ -195,7 +195,7 @@ func TestSelectBuilder_GroupBy_Having_OrderBy(t *testing.T) {
 	})
 
 	t.Run("having parameterized", func(t *testing.T) {
-		q := Select("id").From("users").GroupBy("id").Having("COUNT(*) > ?", 1)
+		q := Select("id").From("users").GroupBy("id").Having(NewStringCondition("COUNT(*) > ?", 1))
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id FROM users GROUP BY id HAVING COUNT(*) > ?"
 		wantArgs := []interface{}{1}
@@ -251,9 +251,9 @@ func TestSelectBuilder_GroupBy_Having_OrderBy(t *testing.T) {
 
 	t.Run("full query with all clauses", func(t *testing.T) {
 		q := Select("id").From("users").
-			Where("active = ?", true).
+			Where(NewStringCondition("active = ?", true)).
 			GroupBy("id").
-			Having("COUNT(*) > ?", 1).
+			Having(NewStringCondition("COUNT(*) > ?", 1)).
 			OrderBy("id DESC")
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id FROM users WHERE active = ? GROUP BY id HAVING COUNT(*) > ? ORDER BY id DESC"
@@ -369,7 +369,7 @@ func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
 	t.Run("full query with join, limit, offset", func(t *testing.T) {
 		q := Select("u.id", "p.id").From("users u").
 			Join("posts p").On("p.user_id", "u.id").
-			Where("u.active = ?", true).
+			Where(NewStringCondition("u.active = ?", true)).
 			OrderBy("u.id DESC").
 			Limit(20).
 			Offset(10)
@@ -426,7 +426,7 @@ func TestSelectBuilder_Distinct_Subquery(t *testing.T) {
 	})
 
 	t.Run("subquery as column", func(t *testing.T) {
-		sub := Select("COUNT(*)").From("posts").Where("posts.user_id = users.id")
+		sub := Select("COUNT(*)").From("posts").Where(NewStringCondition("posts.user_id = users.id"))
 		q := Select("id", sub).From("users")
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id, (SELECT COUNT(*) FROM posts WHERE posts.user_id = users.id) FROM users"
@@ -442,7 +442,7 @@ func TestSelectBuilder_Distinct_Subquery(t *testing.T) {
 	})
 
 	t.Run("subquery as column with args", func(t *testing.T) {
-		sub := Select("COUNT(*)").From("posts").Where("posts.user_id = ?", 42)
+		sub := Select("COUNT(*)").From("posts").Where(NewStringCondition("posts.user_id = ?", 42))
 		q := Select("id", sub).From("users")
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id, (SELECT COUNT(*) FROM posts WHERE posts.user_id = ?) FROM users"
@@ -459,7 +459,7 @@ func TestSelectBuilder_Distinct_Subquery(t *testing.T) {
 	})
 
 	t.Run("subquery in FROM", func(t *testing.T) {
-		sub := Select("id").From("posts").Where("published = ?", true)
+		sub := Select("id").From("posts").Where(NewStringCondition("published = ?", true))
 		q := Select("id").From(sub)
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id FROM (SELECT id FROM posts WHERE published = ?)"
@@ -504,7 +504,7 @@ func TestSelectBuilder_Alias(t *testing.T) {
 	})
 
 	t.Run("alias subquery as column", func(t *testing.T) {
-		sub := Select("COUNT(*)").From("orders").Where("orders.user_id = users.id")
+		sub := Select("COUNT(*)").From("orders").Where(NewStringCondition("orders.user_id = users.id"))
 		q := Select(Alias(sub, "order_count")).From("users")
 		sql, _, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT (SELECT COUNT(*) FROM orders WHERE orders.user_id = users.id) AS order_count FROM users"
@@ -517,7 +517,7 @@ func TestSelectBuilder_Alias(t *testing.T) {
 	})
 
 	t.Run("alias subquery in FROM", func(t *testing.T) {
-		sub := Select("id").From("orders").Where("amount > ?", 100)
+		sub := Select("id").From("orders").Where(NewStringCondition("amount > ?", 100))
 		q := Select("o.id").From(Alias(sub, "o"))
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT o.id FROM (SELECT id FROM orders WHERE amount > ?) AS o"
@@ -556,10 +556,10 @@ func TestSelectBuilder_Alias(t *testing.T) {
 
 func TestSelectBuilder_Compose(t *testing.T) {
 	isActive := func(b *SelectBuilder) *SelectBuilder {
-		return b.Where("active = ?", true)
+		return b.Where(NewStringCondition("active = ?", true))
 	}
 	isAdult := func(b *SelectBuilder) *SelectBuilder {
-		return b.Where("age >= ?", 18)
+		return b.Where(NewStringCondition("age >= ?", 18))
 	}
 
 	t.Run("compose single fragment", func(t *testing.T) {
@@ -595,8 +595,8 @@ func TestSelectBuilder_Compose(t *testing.T) {
 	})
 
 	t.Run("compose order matters", func(t *testing.T) {
-		first := func(b *SelectBuilder) *SelectBuilder { return b.Where("x = ?", 1) }
-		second := func(b *SelectBuilder) *SelectBuilder { return b.Where("y = ?", 2) }
+		first := func(b *SelectBuilder) *SelectBuilder { return b.Where(NewStringCondition("x = ?", 1)) }
+		second := func(b *SelectBuilder) *SelectBuilder { return b.Where(NewStringCondition("y = ?", 2)) }
 		q := Select("id").From("users").Compose(first, second)
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id FROM users WHERE x = ? AND y = ?"
@@ -624,7 +624,7 @@ func TestSelectBuilder_Compose(t *testing.T) {
 
 func TestSelectBuilder_Dialect(t *testing.T) {
 	t.Run("standard dialect", func(t *testing.T) {
-		q := Select("id", "name").From("users").Where("id = ? AND name = ?", 1, "bob").WithDialect(Standard())
+		q := Select("id", "name").From("users").Where(NewStringCondition("id = ? AND name = ?", 1, "bob")).WithDialect(Standard())
 		sql, _, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id, name FROM users WHERE id = ? AND name = ?"
 		if err != nil {
@@ -636,7 +636,7 @@ func TestSelectBuilder_Dialect(t *testing.T) {
 	})
 
 	t.Run("mysql dialect", func(t *testing.T) {
-		q := Select("id", "name").From("users").Where("id = ? AND name = ?", 1, "bob").WithDialect(MySQL())
+		q := Select("id", "name").From("users").Where(NewStringCondition("id = ? AND name = ?", 1, "bob")).WithDialect(MySQL())
 		sql, _, err := q.WithDialect(MySQL()).Build()
 		wantSQL := "SELECT `id`, `name` FROM `users` WHERE id = ? AND name = ?"
 		if err != nil {
@@ -648,7 +648,7 @@ func TestSelectBuilder_Dialect(t *testing.T) {
 	})
 
 	t.Run("postgres dialect", func(t *testing.T) {
-		q := Select("id", "name").From("users").Where("id = ? AND name = ?", 1, "bob").WithDialect(Postgres())
+		q := Select("id", "name").From("users").Where(NewStringCondition("id = ? AND name = ?", 1, "bob")).WithDialect(Postgres())
 		sql, _, err := q.WithDialect(Postgres()).Build()
 		wantSQL := "SELECT \"id\", \"name\" FROM \"users\" WHERE id = $1 AND name = $2"
 		if err != nil {

@@ -5,12 +5,57 @@ import (
 	"strings"
 )
 
+// Condition represents a SQL condition that can be used in WHERE or HAVING clauses.
+// This interface ensures type safety and prevents unsafe queries.
+type Condition interface {
+	// BuildCondition returns the SQL condition string and arguments.
+	// This method is used internally by the query builders.
+	BuildCondition() (string, []interface{}, error)
+}
+
+// StringCondition wraps a string condition for type safety.
+type StringCondition struct {
+	SQL  string
+	Args []interface{}
+}
+
+// NewStringCondition creates a new StringCondition from a SQL string and arguments.
+// This is the preferred way to create string-based conditions for better type safety.
+func NewStringCondition(sql string, args ...interface{}) *StringCondition {
+	return &StringCondition{SQL: sql, Args: args}
+}
+
+// BuildCondition implements the Condition interface.
+func (sc *StringCondition) BuildCondition() (string, []interface{}, error) {
+	return sc.SQL, sc.Args, nil
+}
+
+// RawCondition wraps a Raw SQL condition for type safety.
+type RawCondition struct {
+	SQL Raw
+}
+
+// NewRawCondition creates a new RawCondition from Raw SQL.
+func NewRawCondition(sql Raw) *RawCondition {
+	return &RawCondition{SQL: sql}
+}
+
+// BuildCondition implements the Condition interface.
+func (rc *RawCondition) BuildCondition() (string, []interface{}, error) {
+	return string(rc.SQL), nil, nil
+}
+
 // ConditionBuilder provides a fluent API for building SQL conditions.
 type ConditionBuilder struct {
 	parts   []string
 	args    []interface{}
 	err     error
 	dialect Dialect
+}
+
+// BuildCondition implements the Condition interface.
+func (c *ConditionBuilder) BuildCondition() (string, []interface{}, error) {
+	return c.Build()
 }
 
 // NewCond creates a new ConditionBuilder.

@@ -48,7 +48,7 @@ func (b *UpdateBuilder) SetRaw(expr string) *UpdateBuilder {
 	return b
 }
 
-// Where adds a WHERE clause. Accepts either a condition string (with optional args), Raw, or ConditionBuilder.
+// Where adds a WHERE clause. Accepts either a Condition or Raw.
 func (b *UpdateBuilder) Where(cond interface{}, args ...interface{}) *UpdateBuilder {
 	b.whereClause.Where(cond, args...)
 	return b
@@ -56,13 +56,13 @@ func (b *UpdateBuilder) Where(cond interface{}, args ...interface{}) *UpdateBuil
 
 // WhereEqual adds a WHERE clause for equality (column = value).
 func (b *UpdateBuilder) WhereEqual(column string, value interface{}) *UpdateBuilder {
-	b.Where(column+" = ?", value)
+	b.Where(NewStringCondition(column+" = ?", value))
 	return b
 }
 
 // WhereNotEqual adds a WHERE clause for inequality (column != value).
 func (b *UpdateBuilder) WhereNotEqual(column string, value interface{}) *UpdateBuilder {
-	b.Where(column+" != ?", value)
+	b.Where(NewStringCondition(column+" != ?", value))
 	return b
 }
 
