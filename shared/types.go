@@ -47,6 +47,9 @@ var (
 
 	dialectMu     sync.RWMutex
 	globalDialect Dialect = &mySQLDialectInstance
+
+	// Goroutine-local dialect storage
+	goroutineDialects sync.Map
 )
 
 // Standard returns the standard SQL dialect (no quoting, not the default).

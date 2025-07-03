@@ -9,14 +9,19 @@ A SQL query builder for Go.
 - **Database Agnostic**: Works with any database that implements Go's `database/sql` interface.
 - **Simple API**: Make common queries (SELECT, INSERT, UPDATE, DELETE) easy, but allow for custom/raw SQL.
 
-## ⚠️ Default SQL Dialect
+## Default SQL Dialect
 **MySQL is the default dialect.**
 - Identifiers are quoted with backticks (`` `foo` ``) and placeholders are `?`.
 - If you use Postgres or another database, **set the dialect explicitly**:
   ```go
   cqb.SetDialect(cqb.Postgres()) // for Postgres
   cqb.SetDialect(cqb.Standard()) // for no quoting (legacy/ANSI)
+  
+  q := sq.Select("id", "name").From("users").Where("active = ?", true) // set dialect per builder.
+  sql, args, err := q.WithDialect(cqb.PostGres()).Build()
   ```
+
+### ⚠️ Setting the dialect globally can cause issues when using different dialects concurrently. If you need to support a different dialect, use WithDialect on the builder instead.
 
 ## Setting the SQL Dialect
 Set the dialect globally for your application:
