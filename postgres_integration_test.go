@@ -78,7 +78,6 @@ func TestPostgresIntegration(t *testing.T) {
 
 	// Split database and query parameters
 	dbParams := strings.SplitN(dbAndParams, "?", 2)
-	database := dbParams[0]
 	var params string
 	if len(dbParams) > 1 {
 		params = dbParams[1]
