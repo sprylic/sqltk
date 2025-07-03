@@ -24,8 +24,18 @@ func (w *whereClause) Where(cond interface{}, args ...interface{}) {
 	case string:
 		w.whereParam = append(w.whereParam, c)
 		w.whereArgs = append(w.whereArgs, args...)
+	case *ConditionBuilder:
+		sql, condArgs, err := c.Build()
+		if err != nil {
+			w.err = fmt.Errorf("Where: condition builder error: %w", err)
+			return
+		}
+		if sql != "" {
+			w.whereParam = append(w.whereParam, sql)
+			w.whereArgs = append(w.whereArgs, condArgs...)
+		}
 	default:
-		w.err = fmt.Errorf("Where: cond must be string or sq.Raw (got type %T)", cond)
+		w.err = fmt.Errorf("Where: cond must be string, sq.Raw, or *ConditionBuilder (got type %T)", cond)
 	}
 }
 

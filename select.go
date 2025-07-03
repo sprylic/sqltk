@@ -84,7 +84,7 @@ func (b *SelectBuilder) GroupBy(expr interface{}) *SelectBuilder {
 	return b
 }
 
-// Having adds a HAVING clause. Accepts either a condition string (with optional args) or Raw.
+// Having adds a HAVING clause. Accepts either a condition string (with optional args), Raw, or ConditionBuilder.
 func (b *SelectBuilder) Having(cond interface{}, args ...interface{}) *SelectBuilder {
 	if b.whereClause.err != nil || b.tableClauseInterface.err != nil {
 		return b
@@ -95,8 +95,18 @@ func (b *SelectBuilder) Having(cond interface{}, args ...interface{}) *SelectBui
 	case string:
 		b.havingParam = append(b.havingParam, c)
 		b.havingArgs = append(b.havingArgs, args...)
+	case *ConditionBuilder:
+		sql, condArgs, err := c.Build()
+		if err != nil {
+			b.whereClause.err = fmt.Errorf("Having: condition builder error: %w", err)
+			return b
+		}
+		if sql != "" {
+			b.havingParam = append(b.havingParam, sql)
+			b.havingArgs = append(b.havingArgs, condArgs...)
+		}
 	default:
-		b.whereClause.err = errors.New("Having: cond must be string or sq.Raw")
+		b.whereClause.err = errors.New("Having: cond must be string, sq.Raw, or *ConditionBuilder")
 	}
 	return b
 }
