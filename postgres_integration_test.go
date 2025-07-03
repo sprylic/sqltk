@@ -5,23 +5,114 @@ package stk
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"math/rand"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	_ "github.com/lib/pq"
 	"github.com/sprylic/stk/ddl"
 )
 
 func TestPostgresIntegration(t *testing.T) {
-	dsn := os.Getenv("POSTGRES_DSN")
-	if dsn == "" {
-		dsn = "postgres://postgres:postgres@localhost:5432/postgres_test?sslmode=disable"
+	// Connect to the default database (usually 'postgres')
+	defaultDSN := os.Getenv("POSTGRES_DSN")
+	if defaultDSN == "" {
+		defaultDSN = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 	}
-	db, err := sql.Open("postgres", dsn)
+	defaultDB, err := sql.Open("postgres", defaultDSN)
 	if err != nil {
-		t.Skipf("skipping: failed to connect to postgres: %v", err)
+		t.Skipf("skipping: failed to connect to default postgres: %v", err)
 	}
-	defer db.Close()
+	defer defaultDB.Close()
+
+	suffix := func() string {
+		rand.Seed(time.Now().UnixNano())
+		letters := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+		b := make([]rune, 8)
+		for i := range b {
+			b[i] = letters[rand.Intn(len(letters))]
+		}
+		return string(b)
+	}()
+
+	testDBName := "stk_test_db_" + suffix
+	testSchema := "stk_test_schema_" + suffix
+
+	// Create test database (PostgreSQL doesn't support IF NOT EXISTS for CREATE DATABASE)
+	createDB := ddl.CreateDatabase(testDBName)
+	sqlStr, _, err := createDB.WithDialect(Postgres()).Build()
+	if err != nil {
+		t.Fatalf("create database build: %v", err)
+	}
+	_, err = defaultDB.Exec(sqlStr)
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("create database exec: %v", err)
+	}
+
+	// Connect to the test database
+	// Parse the original DSN to extract username and password
+	// Format: postgres://username:password@host:port/database?params
+	dsnParts := strings.Split(defaultDSN, "@")
+	if len(dsnParts) != 2 {
+		t.Fatalf("invalid DSN format: %s", defaultDSN)
+	}
+
+	// Extract the protocol and credentials part
+	protocolCreds := dsnParts[0]
+	// Remove the protocol part (postgres://)
+	creds := strings.TrimPrefix(protocolCreds, "postgres://")
+
+	// Extract the host and params part
+	hostParams := dsnParts[1]
+	hostPortDB := strings.Split(hostParams, "/")
+	if len(hostParams) < 2 {
+		t.Fatalf("invalid DSN format: %s", defaultDSN)
+	}
+
+	// Reconstruct DSN with test database
+	testDSN := fmt.Sprintf("postgres://%s@%s/%s", creds, hostPortDB[0], testDBName)
+	if len(hostPortDB) > 2 {
+		// Include query parameters if they exist
+		testDSN += "/" + strings.Join(hostPortDB[2:], "/")
+	}
+
+	db, err := sql.Open("postgres", testDSN)
+	if err != nil {
+		t.Fatalf("failed to connect to test database: %v", err)
+	}
+	defer func() {
+		db.Close()
+		// Drop test database (must disconnect all clients first)
+		_, _ = defaultDB.Exec(fmt.Sprintf("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '%s' AND pid <> pg_backend_pid()", testDBName))
+		dropDB := ddl.DropDatabase(testDBName).IfExists().Cascade()
+		sqlStr, _, _ := dropDB.WithDialect(Postgres()).Build()
+		_, _ = defaultDB.Exec(sqlStr)
+	}()
+
+	// Create test schema
+	createSchema := ddl.CreateSchema(testSchema).IfNotExists()
+	sqlStr, _, err = createSchema.WithDialect(Postgres()).Build()
+	if err != nil {
+		t.Fatalf("create schema build: %v", err)
+	}
+	_, err = db.Exec(sqlStr)
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("create schema exec: %v", err)
+	}
+	defer func() {
+		dropSchema := ddl.DropSchema(testSchema).IfExists().Cascade()
+		sqlStr, _, _ := dropSchema.WithDialect(Postgres()).Build()
+		_, _ = db.Exec(sqlStr)
+	}()
+
+	// Set search_path to the test schema
+	_, err = db.Exec(fmt.Sprintf("SET search_path TO %s", testSchema))
+	if err != nil {
+		t.Fatalf("set search_path: %v", err)
+	}
 
 	// Test DDL operations
 	t.Run("DDL Operations", func(t *testing.T) {
@@ -121,6 +212,7 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 	// Insert with RETURNING and PGJSON/PGArray
 	t.Run("Insert with Advanced Features", func(t *testing.T) {
 		jsonData := map[string]interface{}{"preferences": map[string]string{"theme": "dark"}}
+		// Use PGArray for PostgreSQL array type
 		tags := []string{"admin", "verified"}
 
 		pq := NewPostgresInsert("users")
@@ -137,7 +229,7 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 		var dataBytes []byte
 		err = db.QueryRow(sqlStr, args...).Scan(&id, &name, &dataBytes)
 		if err != nil {
-			t.Fatalf("insert query: %v", err)
+			t.Fatalf("insert query: %v\n%s", err, sqlStr)
 		}
 
 		if name != "Alice" {
@@ -170,11 +262,12 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 		}
 
 		// Complex query with join, subquery, and aggregation
-		subq := Select("AVG(amount)").From("orders")
+		// Use raw SQL for subquery to avoid SelectBuilder type issues
+		subq := Raw("(SELECT AVG(amount) FROM orders)")
 		q := Select("u.name", "COUNT(o.id) as order_count", "SUM(o.amount) as total_amount").
 			From(Alias("users", "u")).
 			LeftJoin("orders o").On("o.user_id", "u.id").
-			Where("o.amount > (?)", subq).
+			Where("o.amount > " + string(subq)).
 			GroupBy("u.name").
 			OrderBy("total_amount DESC")
 
@@ -201,6 +294,73 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 		}
 		if count == 0 {
 			t.Error("expected at least one result from complex query")
+		}
+	})
+
+	// Advanced UPDATE with RETURNING
+	t.Run("Advanced Update", func(t *testing.T) {
+		// Insert a test user first
+		_, err := db.Exec(`INSERT INTO users (name, email, age) VALUES ('Bob', 'bob@example.com', 25)`)
+		if err != nil {
+			t.Fatalf("insert test user: %v", err)
+		}
+
+		// Update with RETURNING
+		q := Update("users").
+			Set("age", 26).
+			Set("updated_at", Raw("NOW()")).
+			Where("name = ?", "Bob")
+
+		sqlStr, args, err := q.WithDialect(Postgres()).Build()
+		if err != nil {
+			t.Fatalf("update build: %v", err)
+		}
+
+		// Add RETURNING clause manually for Postgres
+		sqlStr += " RETURNING id, name, age, updated_at"
+
+		var id int
+		var name string
+		var age int
+		var updatedAt interface{}
+		err = db.QueryRow(sqlStr, args...).Scan(&id, &name, &age, &updatedAt)
+		if err != nil {
+			t.Fatalf("update query: %v", err)
+		}
+
+		if name != "Bob" || age != 26 {
+			t.Errorf("expected Bob with age 26, got %s with age %d", name, age)
+		}
+	})
+
+	// DELETE with RETURNING
+	t.Run("Delete with Returning", func(t *testing.T) {
+		// Insert a test user first
+		_, err := db.Exec(`INSERT INTO users (name, email, age) VALUES ('Charlie', 'charlie@example.com', 30)`)
+		if err != nil {
+			t.Fatalf("insert test user: %v", err)
+		}
+
+		// Delete with RETURNING
+		q := Delete("users").Where("name = ?", "Charlie")
+
+		sqlStr, args, err := q.WithDialect(Postgres()).Build()
+		if err != nil {
+			t.Fatalf("delete build: %v", err)
+		}
+
+		// Add RETURNING clause manually for Postgres
+		sqlStr += " RETURNING id, name, email"
+
+		var id int
+		var name, email string
+		err = db.QueryRow(sqlStr, args...).Scan(&id, &name, &email)
+		if err != nil {
+			t.Fatalf("delete query: %v", err)
+		}
+
+		if name != "Charlie" || email != "charlie@example.com" {
+			t.Errorf("expected Charlie with email charlie@example.com, got %s with email %s", name, email)
 		}
 	})
 }

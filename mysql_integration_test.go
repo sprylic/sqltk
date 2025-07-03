@@ -4,8 +4,11 @@ package stk
 
 import (
 	"database/sql"
+	"math/rand"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/sprylic/stk/ddl"
@@ -14,27 +17,69 @@ import (
 func TestMySQLIntegration(t *testing.T) {
 	dsn := os.Getenv("MYSQL_DSN")
 	if dsn == "" {
-		dsn = "root:password@tcp(localhost:3306)/mysql_test"
+		dsn = "root:password@tcp(localhost:3306)/"
 	}
+	// Connect to MySQL without specifying a test database
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		t.Skipf("skipping: failed to connect to mysql: %v", err)
 	}
 	defer db.Close()
 
+	suffix := func() string {
+		rand.Seed(time.Now().UnixNano())
+		letters := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+		b := make([]rune, 8)
+		for i := range b {
+			b[i] = letters[rand.Intn(len(letters))]
+		}
+		return string(b)
+	}()
+
+	testDBName := "stk_test_db_" + suffix
+
+	// Create test database
+	createDB := ddl.CreateDatabase(testDBName).IfNotExists().Charset("utf8mb4").Collation("utf8mb4_unicode_ci")
+	sqlStr, _, err := createDB.WithDialect(MySQL()).Build()
+	if err != nil {
+		t.Fatalf("create database build: %v", err)
+	}
+	_, err = db.Exec(sqlStr)
+	if err != nil && !strings.Contains(err.Error(), "exists") {
+		t.Fatalf("create database exec: %v", err)
+	}
+
+	// Connect to the test database
+	testDSN := dsn
+	if idx := strings.LastIndex(testDSN, "/"); idx != -1 {
+		testDSN = testDSN[:idx+1] + testDBName + testDSN[idx+1+len("mysql"):]
+	} else {
+		testDSN += "/" + testDBName
+	}
+	testDB, err := sql.Open("mysql", testDSN)
+	if err != nil {
+		t.Fatalf("failed to connect to test database: %v", err)
+	}
+	defer func() {
+		testDB.Close()
+		dropDB := ddl.DropDatabase(testDBName).IfExists()
+		sqlStr, _, _ := dropDB.WithDialect(MySQL()).Build()
+		_, _ = db.Exec(sqlStr)
+	}()
+
 	// Test DDL operations
 	t.Run("DDL Operations", func(t *testing.T) {
-		testMySQLDDL(t, db)
+		testMySQLDDL(t, testDB)
 	})
 
 	// Test basic CRUD operations
 	t.Run("Basic CRUD", func(t *testing.T) {
-		testMySQLCRUD(t, db)
+		testMySQLCRUD(t, testDB)
 	})
 
 	// Test advanced features
 	t.Run("Advanced Features", func(t *testing.T) {
-		testMySQLAdvanced(t, db)
+		testMySQLAdvanced(t, testDB)
 	})
 }
 
@@ -52,7 +97,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 			AddColumn(ddl.Column("name").Type("VARCHAR").Size(255).NotNull()).
 			AddColumn(ddl.Column("email").Type("VARCHAR").Size(255)).
 			AddColumn(ddl.Column("age").Type("INT")).
-			AddColumn(ddl.Column("created_at").Type("TIMESTAMP").Default("CURRENT_TIMESTAMP")).
+			AddColumn(ddl.Column("created_at").Type("TIMESTAMP").Default("CURRENT_TIMESTAMP").NotNull()).
 			PrimaryKey("id").
 			Unique("idx_email", "email").
 			Check("chk_age", "age >= 0").
@@ -100,7 +145,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 	// Test ALTER TABLE
 	t.Run("Alter Table", func(t *testing.T) {
 		q := ddl.AlterTable("users").
-			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").Default("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")).
+			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").Default("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP").NotNull()).
 			AddConstraint(ddl.Constraint{
 				Type:    ddl.UniqueType,
 				Name:    "idx_name_age",

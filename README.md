@@ -88,6 +88,95 @@ sql, args, err := q.Build()
 // args: [1]
 ```
 
+## DDL Operations
+
+### Database Operations
+```go
+import "github.com/sprylic/stk/ddl"
+
+// Create database
+createDB := ddl.CreateDatabase("myapp_db").
+    IfNotExists().
+    Charset("utf8mb4").
+    Collation("utf8mb4_unicode_ci")
+sql, _, err := createDB.Build()
+// sql: "CREATE DATABASE IF NOT EXISTS `myapp_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+
+// Drop database
+dropDB := ddl.DropDatabase("myapp_db").IfExists()
+sql, _, err := dropDB.Build()
+// sql: "DROP DATABASE IF EXISTS `myapp_db`"
+```
+
+### Schema Operations (PostgreSQL)
+```go
+// Create schema
+createSchema := ddl.CreateSchema("myapp_schema").
+    IfNotExists().
+    Authorization("myapp_user")
+sql, _, err := createSchema.Build()
+// sql: "CREATE SCHEMA IF NOT EXISTS \"myapp_schema\" AUTHORIZATION \"myapp_user\""
+
+// Drop schema
+dropSchema := ddl.DropSchema("myapp_schema").
+    IfExists().
+    Cascade()
+sql, _, err := dropSchema.Build()
+// sql: "DROP SCHEMA IF EXISTS \"myapp_schema\" CASCADE"
+```
+
+### Table Operations
+```go
+// Create table
+createTable := ddl.CreateTable("users").
+    AddColumn(ddl.Column("id").Type("INT").AutoIncrement().NotNull()).
+    AddColumn(ddl.Column("name").Type("VARCHAR").Size(255).NotNull()).
+    AddColumn(ddl.Column("email").Type("VARCHAR").Size(255)).
+    PrimaryKey("id").
+    Unique("idx_email", "email")
+sql, _, err := createTable.Build()
+// sql: "CREATE TABLE `users` (`id` INT AUTO_INCREMENT NOT NULL, `name` VARCHAR(255) NOT NULL, `email` VARCHAR(255), PRIMARY KEY (`id`), CONSTRAINT idx_email UNIQUE (`email`))"
+
+// Alter table
+alterTable := ddl.AlterTable("users").
+    AddColumn(ddl.Column("age").Type("INT")).
+    AddIndex("idx_age", "age")
+sql, _, err := alterTable.Build()
+// sql: "ALTER TABLE `users` ADD COLUMN `age` INT, ADD INDEX idx_age (`age`)"
+
+// Drop table
+dropTable := ddl.DropTable("users").IfExists()
+sql, _, err := dropTable.Build()
+// sql: "DROP TABLE IF EXISTS `users`"
+```
+
+### Index Operations
+```go
+// Create index
+createIndex := ddl.CreateIndex("idx_users_name", "users").Columns("name")
+sql, _, err := createIndex.Build()
+// sql: "CREATE INDEX `idx_users_name` ON `users` (`name`)"
+
+// Drop index
+dropIndex := ddl.DropIndex("idx_users_name", "users")
+sql, _, err := dropIndex.Build()
+// sql: "DROP INDEX `idx_users_name` ON `users`"
+```
+
+### View Operations
+```go
+// Create view
+subq := stk.Select("name", "COUNT(*) as count").From("users").GroupBy("name")
+createView := ddl.CreateView("user_stats").As(subq)
+sql, _, err := createView.Build()
+// sql: "CREATE VIEW `user_stats` AS SELECT `name`, COUNT(*) as count FROM `users` GROUP BY `name`"
+
+// Drop view
+dropView := ddl.DropView("user_stats").IfExists()
+sql, _, err := dropView.Build()
+// sql: "DROP VIEW IF EXISTS `user_stats`"
+```
+
 ## SQL Dialect Examples
 
 #### MySQL (default)

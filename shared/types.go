@@ -47,9 +47,6 @@ var (
 
 	dialectMu     sync.RWMutex
 	globalDialect Dialect = &mySQLDialectInstance
-
-	// Goroutine-local dialect storage
-	goroutineDialects sync.Map
 )
 
 // Standard returns the standard SQL dialect (no quoting, not the default).
@@ -98,7 +95,24 @@ type PGArray struct {
 
 // Value implements driver.Valuer for PGArray.
 func (a PGArray) Value() (driver.Value, error) {
-	// For simple types, database/sql/driver will handle slices as Postgres arrays.
+	if a.V == nil {
+		return nil, nil
+	}
+
+	// Handle string slices specifically for PostgreSQL text arrays
+	if strSlice, ok := a.V.([]string); ok {
+		// Convert []string to PostgreSQL array format: {"value1","value2"}
+		// Escape quotes in strings and wrap in curly braces
+		escaped := make([]string, len(strSlice))
+		for i, s := range strSlice {
+			// Escape double quotes by doubling them
+			escaped[i] = `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
+		}
+		result := "{" + strings.Join(escaped, ",") + "}"
+		return result, nil
+	}
+
+	// For other types, let the driver handle it
 	return a.V, nil
 }
 

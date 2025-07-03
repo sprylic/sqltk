@@ -218,11 +218,11 @@ func (jb *JoinBuilder) On(left, right string) *SelectBuilder {
 				jb.parent.whereClause.err = fmt.Errorf("join alias subquery error: %w", subErr)
 				return jb.parent
 			}
-			clause += "(" + subSQL + ") AS " + dialect.QuoteIdent(t.Alias)
+			clause += "(" + subSQL + ") AS " + t.Alias
 		case string:
-			clause += dialect.QuoteIdent(expr) + " AS " + dialect.QuoteIdent(t.Alias)
+			clause += dialect.QuoteIdent(expr) + " AS " + t.Alias
 		case Raw:
-			clause += string(expr) + " AS " + dialect.QuoteIdent(t.Alias)
+			clause += string(expr) + " AS " + t.Alias
 		default:
 			jb.parent.whereClause.err = fmt.Errorf("join alias: expr must be string, Raw, or *SelectBuilder (got %T)", expr)
 			return jb.parent
@@ -299,7 +299,42 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 			}
 			switch c := col.(type) {
 			case string:
-				sb.WriteString(dialect.QuoteIdent(c))
+				// Handle expressions with aliases (e.g., "COUNT(*) as count")
+				if strings.Contains(strings.ToUpper(c), " AS ") {
+					parts := strings.SplitN(c, " AS ", 2)
+					if len(parts) == 2 {
+						expr := strings.TrimSpace(parts[0])
+						alias := strings.TrimSpace(parts[1])
+
+						// Handle table-qualified column names in expressions
+						if strings.Contains(expr, ".") {
+							exprParts := strings.Split(expr, ".")
+							for i, part := range exprParts {
+								if i > 0 {
+									sb.WriteString(".")
+								}
+								sb.WriteString(dialect.QuoteIdent(strings.TrimSpace(part)))
+							}
+						} else {
+							sb.WriteString(expr)
+						}
+						sb.WriteString(" AS ")
+						sb.WriteString(alias)
+					} else {
+						sb.WriteString(c)
+					}
+				} else if strings.Contains(c, ".") {
+					// Handle table-qualified column names (e.g., "table.column")
+					parts := strings.Split(c, ".")
+					for i, part := range parts {
+						if i > 0 {
+							sb.WriteString(".")
+						}
+						sb.WriteString(dialect.QuoteIdent(strings.TrimSpace(part)))
+					}
+				} else {
+					sb.WriteString(dialect.QuoteIdent(c))
+				}
 			case Raw:
 				sb.WriteString(string(c))
 			case *SelectBuilder:
@@ -314,23 +349,33 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 			case AliasExpr:
 				switch expr := c.Expr.(type) {
 				case *SelectBuilder:
-					subSQL, subArgs, subErr := expr.Build()
+					subSQL, _, subErr := expr.Build()
 					if subErr != nil {
 						err = subErr
 					}
 					sb.WriteString("(")
 					sb.WriteString(subSQL)
 					sb.WriteString(") AS ")
-					sb.WriteString(dialect.QuoteIdent(c.Alias))
-					args = append(args, subArgs...)
+					sb.WriteString(c.Alias)
 				case string:
-					sb.WriteString(dialect.QuoteIdent(expr))
+					// Handle table-qualified column names in AliasExpr
+					if strings.Contains(expr, ".") {
+						parts := strings.Split(expr, ".")
+						for i, part := range parts {
+							if i > 0 {
+								sb.WriteString(".")
+							}
+							sb.WriteString(dialect.QuoteIdent(strings.TrimSpace(part)))
+						}
+					} else {
+						sb.WriteString(dialect.QuoteIdent(expr))
+					}
 					sb.WriteString(" AS ")
-					sb.WriteString(dialect.QuoteIdent(c.Alias))
+					sb.WriteString(c.Alias)
 				case Raw:
 					sb.WriteString(string(expr))
 					sb.WriteString(" AS ")
-					sb.WriteString(dialect.QuoteIdent(c.Alias))
+					sb.WriteString(c.Alias)
 				default:
 					err = errors.New("Alias: expr must be string, sq.Raw, or *SelectBuilder")
 				}
@@ -357,23 +402,22 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 	case AliasExpr:
 		switch expr := t.Expr.(type) {
 		case *SelectBuilder:
-			subSQL, subArgs, subErr := expr.Build()
+			subSQL, _, subErr := expr.Build()
 			if subErr != nil {
 				err = subErr
 			}
 			sb.WriteString("(")
 			sb.WriteString(subSQL)
 			sb.WriteString(") AS ")
-			sb.WriteString(dialect.QuoteIdent(t.Alias))
-			args = append(args, subArgs...)
+			sb.WriteString(t.Alias)
 		case string:
 			sb.WriteString(dialect.QuoteIdent(expr))
 			sb.WriteString(" AS ")
-			sb.WriteString(dialect.QuoteIdent(t.Alias))
+			sb.WriteString(t.Alias)
 		case Raw:
 			sb.WriteString(string(expr))
 			sb.WriteString(" AS ")
-			sb.WriteString(dialect.QuoteIdent(t.Alias))
+			sb.WriteString(t.Alias)
 		default:
 			err = errors.New("Alias: expr must be string, sq.Raw, or *SelectBuilder")
 		}
@@ -396,8 +440,38 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 	var groupBys []string
 	if len(b.groupBy) > 0 {
 		for _, g := range b.groupBy {
-			groupBys = append(groupBys, dialect.QuoteIdent(g))
+			if strings.Contains(g, ".") {
+				parts := strings.Split(g, ".")
+				for i, part := range parts {
+					if i > 0 {
+						groupBys = append(groupBys, ".")
+					}
+					groupBys = append(groupBys, dialect.QuoteIdent(strings.TrimSpace(part)))
+				}
+				groupBys = append(groupBys, "") // To join with dot
+			} else {
+				groupBys = append(groupBys, dialect.QuoteIdent(g))
+			}
 		}
+		// Remove empty strings and join with dot for qualified names
+		var cleaned []string
+		var current string
+		for _, gb := range groupBys {
+			if gb == "." {
+				current += "."
+			} else if gb == "" {
+				if current != "" {
+					cleaned = append(cleaned, current)
+					current = ""
+				}
+			} else {
+				current += gb
+			}
+		}
+		if current != "" {
+			cleaned = append(cleaned, current)
+		}
+		groupBys = cleaned
 	}
 	if len(b.groupByRaw) > 0 {
 		groupBys = append(groupBys, b.groupByRaw...)
@@ -428,7 +502,36 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 	var orderBys []string
 	if len(b.orderBy) > 0 {
 		for _, o := range b.orderBy {
-			orderBys = append(orderBys, dialect.QuoteIdent(o))
+			// Handle expressions like 'total_amount DESC'
+			if idx := strings.IndexAny(o, " "); idx > 0 {
+				col := o[:idx]
+				dir := strings.TrimSpace(o[idx+1:])
+				if strings.Contains(col, ".") {
+					parts := strings.Split(col, ".")
+					var quoted string
+					for i, part := range parts {
+						if i > 0 {
+							quoted += "."
+						}
+						quoted += dialect.QuoteIdent(strings.TrimSpace(part))
+					}
+					orderBys = append(orderBys, quoted+" "+dir)
+				} else {
+					orderBys = append(orderBys, dialect.QuoteIdent(col)+" "+dir)
+				}
+			} else if strings.Contains(o, ".") {
+				parts := strings.Split(o, ".")
+				var quoted string
+				for i, part := range parts {
+					if i > 0 {
+						quoted += "."
+					}
+					quoted += dialect.QuoteIdent(strings.TrimSpace(part))
+				}
+				orderBys = append(orderBys, quoted)
+			} else {
+				orderBys = append(orderBys, dialect.QuoteIdent(o))
+			}
 		}
 	}
 	if len(b.orderByRaw) > 0 {

@@ -109,7 +109,7 @@ type PostgresInsertBuilder struct {
 
 // NewPostgresInsert creates a new PostgresInsertBuilder for the given table.
 func NewPostgresInsert(table string) *PostgresInsertBuilder {
-	return &PostgresInsertBuilder{InsertBuilder: Insert(table)}
+	return &PostgresInsertBuilder{InsertBuilder: Insert(table).WithDialect(Postgres())}
 }
 
 // Returning adds a RETURNING clause (Postgres only).
