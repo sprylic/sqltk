@@ -67,16 +67,27 @@ func TestPostgresIntegration(t *testing.T) {
 
 	// Extract the host and params part
 	hostParams := dsnParts[1]
-	hostPortDB := strings.Split(hostParams, "/")
-	if len(hostParams) < 2 {
+	// Split on / to separate host:port from database and query params
+	parts := strings.SplitN(hostParams, "/", 2)
+	if len(parts) < 2 {
 		t.Fatalf("invalid DSN format: %s", defaultDSN)
 	}
 
+	hostPort := parts[0]
+	dbAndParams := parts[1]
+
+	// Split database and query parameters
+	dbParams := strings.SplitN(dbAndParams, "?", 2)
+	database := dbParams[0]
+	var params string
+	if len(dbParams) > 1 {
+		params = dbParams[1]
+	}
+
 	// Reconstruct DSN with test database
-	testDSN := fmt.Sprintf("postgres://%s@%s/%s", creds, hostPortDB[0], testDBName)
-	if len(hostPortDB) > 2 {
-		// Include query parameters if they exist
-		testDSN += "/" + strings.Join(hostPortDB[2:], "/")
+	testDSN := fmt.Sprintf("postgres://%s@%s/%s", creds, hostPort, testDBName)
+	if params != "" {
+		testDSN += "?" + params
 	}
 
 	db, err := sql.Open("postgres", testDSN)
