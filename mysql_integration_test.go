@@ -240,7 +240,8 @@ func testMySQLAdvanced(t *testing.T, db *sql.DB) {
 
 		// Complex query with subquery and aggregation
 		subq := Select("AVG(age)").From("users")
-		q := Select("name", "age").From("users").Where("age > (?)", subq)
+		subSQL, _, _ := subq.WithDialect(MySQL()).Build()
+		q := Select("name", "age").From("users").Where(Raw("age > (" + subSQL + ")"))
 		sqlStr, args, err := q.WithDialect(MySQL()).Build()
 		if err != nil {
 			t.Fatalf("complex select build: %v", err)
