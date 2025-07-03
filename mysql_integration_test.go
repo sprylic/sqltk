@@ -109,7 +109,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 			AddColumn(ddl.Column("name").Type("VARCHAR").Size(255).NotNull()).
 			AddColumn(ddl.Column("email").Type("VARCHAR").Size(255)).
 			AddColumn(ddl.Column("age").Type("INT")).
-			AddColumn(ddl.Column("created_at").Type("TIMESTAMP").Default("CURRENT_TIMESTAMP").NotNull()).
+			AddColumn(ddl.Column("created_at").Type("TIMESTAMP").Default(Raw("CURRENT_TIMESTAMP")).NotNull()).
 			PrimaryKey("id").
 			Unique("idx_email", "email").
 			Check("chk_age", "age >= 0").
@@ -157,7 +157,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 	// Test ALTER TABLE
 	t.Run("Alter Table", func(t *testing.T) {
 		q := ddl.AlterTable("users").
-			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").Default("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP").NotNull()).
+			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").Default(Raw("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")).NotNull()).
 			AddConstraint(ddl.Constraint{
 				Type:    ddl.UniqueType,
 				Name:    "idx_name_age",
