@@ -1,0 +1,708 @@
+package cqb
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
+// Option represents a table option with name and value.
+type Option struct {
+	Name  string
+	Value string
+}
+
+// CreateTableBuilder builds SQL CREATE TABLE queries.
+type CreateTableBuilder struct {
+	tableName   string
+	columns     []ColumnDef
+	constraints []Constraint
+	options     []Option // ENGINE, CHARSET, etc. in order
+	ifNotExists bool
+	temporary   bool
+	err         error
+	dialect     Dialect
+}
+
+// CreateTable creates a new CreateTableBuilder for the given table.
+func CreateTable(tableName string) *CreateTableBuilder {
+	if tableName == "" {
+		return &CreateTableBuilder{err: errors.New("table name is required")}
+	}
+	return &CreateTableBuilder{
+		tableName: tableName,
+		options:   make([]Option, 0),
+	}
+}
+
+// ColumnBuilder builds a column definition.
+type ColumnBuilder struct {
+	def ColumnDef
+	err error
+}
+
+// Column creates a new ColumnBuilder for the given column name.
+func Column(name string) *ColumnBuilder {
+	if name == "" {
+		return &ColumnBuilder{err: errors.New("column name is required")}
+	}
+	return &ColumnBuilder{
+		def: ColumnDef{Name: name},
+	}
+}
+
+// BuildDef returns the built ColumnDef and any error.
+func (cb *ColumnBuilder) BuildDef() (ColumnDef, error) {
+	if cb.err != nil {
+		return ColumnDef{}, cb.err
+	}
+	if cb.def.Type == "" {
+		return ColumnDef{}, errors.New("column type is required")
+	}
+	return cb.def, nil
+}
+
+// AddColumn adds a column from a ColumnBuilder.
+func (b *CreateTableBuilder) AddColumn(cb *ColumnBuilder) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	col, err := cb.BuildDef()
+	if err != nil {
+		b.err = err
+		return b
+	}
+	b.columns = append(b.columns, col)
+	return b
+}
+
+// AddColumnWithType is a convenience method to add a column with just name and type.
+func (b *CreateTableBuilder) AddColumnWithType(name, typ string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if name == "" {
+		b.err = errors.New("column name is required")
+		return b
+	}
+	if typ == "" {
+		b.err = errors.New("column type is required")
+		return b
+	}
+
+	col := ColumnDef{
+		Name: name,
+		Type: strings.ToUpper(typ),
+	}
+	b.columns = append(b.columns, col)
+	return b
+}
+
+// Convenience methods for common column types
+
+// Int adds an INT column.
+func (b *CreateTableBuilder) Int(name string) *CreateTableBuilder {
+	return b.AddColumnWithType(name, "INT")
+}
+
+// BigInt adds a BIGINT column.
+func (b *CreateTableBuilder) BigInt(name string) *CreateTableBuilder {
+	return b.AddColumnWithType(name, "BIGINT")
+}
+
+// Varchar adds a VARCHAR column with the specified size.
+func (b *CreateTableBuilder) Varchar(name string, size int) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if size <= 0 {
+		b.err = errors.New("varchar size must be positive")
+		return b
+	}
+
+	col := ColumnDef{
+		Name: name,
+		Type: "VARCHAR",
+		Size: &size,
+	}
+	b.columns = append(b.columns, col)
+	return b
+}
+
+// Text adds a TEXT column.
+func (b *CreateTableBuilder) Text(name string) *CreateTableBuilder {
+	return b.AddColumnWithType(name, "TEXT")
+}
+
+// Boolean adds a BOOLEAN column.
+func (b *CreateTableBuilder) Boolean(name string) *CreateTableBuilder {
+	return b.AddColumnWithType(name, "BOOLEAN")
+}
+
+// Timestamp adds a TIMESTAMP column.
+func (b *CreateTableBuilder) Timestamp(name string) *CreateTableBuilder {
+	return b.AddColumnWithType(name, "TIMESTAMP")
+}
+
+// DateTime adds a DATETIME column.
+func (b *CreateTableBuilder) DateTime(name string) *CreateTableBuilder {
+	return b.AddColumnWithType(name, "DATETIME")
+}
+
+// Decimal adds a DECIMAL column with precision and scale.
+func (b *CreateTableBuilder) Decimal(name string, precision, scale int) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if precision <= 0 {
+		b.err = errors.New("precision must be positive")
+		return b
+	}
+	if scale < 0 || scale > precision {
+		b.err = errors.New("scale must be between 0 and precision")
+		return b
+	}
+
+	col := ColumnDef{
+		Name:      name,
+		Type:      "DECIMAL",
+		Precision: &precision,
+		Scale:     &scale,
+	}
+	b.columns = append(b.columns, col)
+	return b
+}
+
+// Type sets the column type.
+func (cb *ColumnBuilder) Type(typ string) *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	if typ == "" {
+		cb.err = errors.New("column type is required")
+		return cb
+	}
+	cb.def.Type = strings.ToUpper(typ)
+	return cb
+}
+
+// Size sets the column size (for VARCHAR, INT, etc.).
+func (cb *ColumnBuilder) Size(size int) *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	if size <= 0 {
+		cb.err = errors.New("column size must be positive")
+		return cb
+	}
+	cb.def.Size = &size
+	return cb
+}
+
+// Precision sets the column precision and scale (for DECIMAL, NUMERIC, etc.).
+func (cb *ColumnBuilder) Precision(precision, scale int) *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	if precision <= 0 {
+		cb.err = errors.New("precision must be positive")
+		return cb
+	}
+	if scale < 0 || scale > precision {
+		cb.err = errors.New("scale must be between 0 and precision")
+		return cb
+	}
+	cb.def.Precision = &precision
+	cb.def.Scale = &scale
+	return cb
+}
+
+// Nullable makes the column nullable.
+func (cb *ColumnBuilder) Nullable() *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	nullable := true
+	cb.def.Nullable = &nullable
+	return cb
+}
+
+// NotNull makes the column not null.
+func (cb *ColumnBuilder) NotNull() *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	nullable := false
+	cb.def.Nullable = &nullable
+	return cb
+}
+
+// Default sets the column default value.
+func (cb *ColumnBuilder) Default(value interface{}) *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.def.Default = value
+	return cb
+}
+
+// AutoIncrement makes the column auto-incrementing.
+func (cb *ColumnBuilder) AutoIncrement() *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.def.AutoIncrement = true
+	return cb
+}
+
+// Collation sets the column collation.
+func (cb *ColumnBuilder) Collation(collation string) *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.def.Collation = collation
+	return cb
+}
+
+// Charset sets the column character set.
+func (cb *ColumnBuilder) Charset(charset string) *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.def.Charset = charset
+	return cb
+}
+
+// Comment sets the column comment.
+func (cb *ColumnBuilder) Comment(comment string) *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.def.Comment = comment
+	return cb
+}
+
+// IfNotExists adds IF NOT EXISTS to the CREATE TABLE statement.
+func (b *CreateTableBuilder) IfNotExists() *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.ifNotExists = true
+	return b
+}
+
+// Temporary creates a temporary table.
+func (b *CreateTableBuilder) Temporary() *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.temporary = true
+	return b
+}
+
+// Engine sets the table engine (MySQL).
+func (b *CreateTableBuilder) Engine(engine string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.options = append(b.options, Option{Name: "ENGINE", Value: engine})
+	return b
+}
+
+// Charset sets the table character set.
+func (b *CreateTableBuilder) Charset(charset string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.options = append(b.options, Option{Name: "CHARACTER SET", Value: charset})
+	return b
+}
+
+// Collation sets the table collation.
+func (b *CreateTableBuilder) Collation(collation string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.options = append(b.options, Option{Name: "COLLATE", Value: collation})
+	return b
+}
+
+// Comment sets the table comment.
+func (b *CreateTableBuilder) Comment(comment string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.options = append(b.options, Option{Name: "COMMENT", Value: comment})
+	return b
+}
+
+// PrimaryKeyType adds a primary key constraint.
+func (b *CreateTableBuilder) PrimaryKey(columns ...string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if len(columns) == 0 {
+		b.err = errors.New("primary key must specify at least one column")
+		return b
+	}
+	b.constraints = append(b.constraints, Constraint{
+		Type:    PrimaryKeyType,
+		Columns: columns,
+	})
+	return b
+}
+
+// UniqueType adds a unique constraint.
+func (b *CreateTableBuilder) Unique(name string, columns ...string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if len(columns) == 0 {
+		b.err = errors.New("unique constraint must specify at least one column")
+		return b
+	}
+	b.constraints = append(b.constraints, Constraint{
+		Type:    UniqueType,
+		Name:    name,
+		Columns: columns,
+	})
+	return b
+}
+
+// CheckType adds a check constraint.
+func (b *CreateTableBuilder) Check(name, expr string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if expr == "" {
+		b.err = errors.New("check constraint expression is required")
+		return b
+	}
+	b.constraints = append(b.constraints, Constraint{
+		Type:      CheckType,
+		Name:      name,
+		CheckExpr: expr,
+	})
+	return b
+}
+
+// IndexType adds an index.
+func (b *CreateTableBuilder) Index(name string, columns ...string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if len(columns) == 0 {
+		b.err = errors.New("index must specify at least one column")
+		return b
+	}
+	b.constraints = append(b.constraints, Constraint{
+		Type:    IndexType,
+		Name:    name,
+		Columns: columns,
+	})
+	return b
+}
+
+// ForeignKeyBuilder builds a foreign key constraint.
+type ForeignKeyBuilder struct {
+	parent     *CreateTableBuilder
+	constraint Constraint
+	err        error
+}
+
+// ForeignKey creates a standalone foreign key builder.
+func ForeignKey(name string, columns ...string) *ForeignKeyBuilder {
+	if name == "" {
+		return &ForeignKeyBuilder{err: errors.New("foreign key name is required")}
+	}
+	if len(columns) == 0 {
+		return &ForeignKeyBuilder{err: errors.New("foreign key must specify at least one column")}
+	}
+	return &ForeignKeyBuilder{
+		constraint: Constraint{
+			Type:    ForeignKeyType,
+			Name:    name,
+			Columns: columns,
+		},
+	}
+}
+
+// ForeignKeyType starts building a foreign key constraint.
+func (b *CreateTableBuilder) ForeignKey(name string, columns ...string) *ForeignKeyBuilder {
+	if b.err != nil {
+		return &ForeignKeyBuilder{parent: b, err: b.err}
+	}
+	if name == "" {
+		return &ForeignKeyBuilder{parent: b, err: errors.New("foreign key name is required")}
+	}
+	if len(columns) == 0 {
+		return &ForeignKeyBuilder{parent: b, err: errors.New("foreign key must specify at least one column")}
+	}
+	return &ForeignKeyBuilder{
+		parent: b,
+		constraint: Constraint{
+			Type:    ForeignKeyType,
+			Name:    name,
+			Columns: columns,
+		},
+	}
+}
+
+// References sets the referenced table and columns.
+func (fkb *ForeignKeyBuilder) References(table string, columns ...string) *ForeignKeyBuilder {
+	if fkb.err != nil {
+		return fkb
+	}
+	if table == "" {
+		fkb.err = errors.New("referenced table is required")
+		return fkb
+	}
+	fkb.constraint.Reference = &ForeignKeyRef{
+		Table:   table,
+		Columns: columns,
+	}
+	return fkb
+}
+
+// OnDelete sets the ON DELETE action.
+func (fkb *ForeignKeyBuilder) OnDelete(action string) *ForeignKeyBuilder {
+	if fkb.err != nil {
+		return fkb
+	}
+	if fkb.constraint.Reference == nil {
+		fkb.err = errors.New("must call References before OnDelete")
+		return fkb
+	}
+	fkb.constraint.Reference.OnDelete = action
+	return fkb
+}
+
+// OnUpdate sets the ON UPDATE action.
+func (fkb *ForeignKeyBuilder) OnUpdate(action string) *ForeignKeyBuilder {
+	if fkb.err != nil {
+		return fkb
+	}
+	if fkb.constraint.Reference == nil {
+		fkb.err = errors.New("must call References before OnUpdate")
+		return fkb
+	}
+	fkb.constraint.Reference.OnUpdate = action
+	return fkb
+}
+
+// Build finalizes the foreign key constraint and adds it to the table.
+func (fkb *ForeignKeyBuilder) Build() *CreateTableBuilder {
+	if fkb.err != nil {
+		fkb.parent.err = fkb.err
+		return fkb.parent
+	}
+	if fkb.constraint.Reference == nil {
+		fkb.parent.err = errors.New("foreign key must specify referenced table")
+		return fkb.parent
+	}
+	fkb.parent.constraints = append(fkb.parent.constraints, fkb.constraint)
+	return fkb.parent
+}
+
+// AddForeignKey adds a foreign key constraint to the table.
+func (b *CreateTableBuilder) AddForeignKey(fkb *ForeignKeyBuilder) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if fkb.err != nil {
+		b.err = fkb.err
+		return b
+	}
+	if fkb.constraint.Reference == nil {
+		b.err = errors.New("foreign key must specify referenced table")
+		return b
+	}
+	b.constraints = append(b.constraints, fkb.constraint)
+	return b
+}
+
+// WithDialect sets the dialect for this builder instance.
+func (b *CreateTableBuilder) WithDialect(d Dialect) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.dialect = d
+	return b
+}
+
+// Build builds the SQL CREATE TABLE query and returns the query string, arguments, and error if any.
+func (b *CreateTableBuilder) Build() (string, []interface{}, error) {
+	if b.err != nil {
+		return "", nil, b.err
+	}
+	if b.tableName == "" {
+		return "", nil, errors.New("table name is required")
+	}
+	if len(b.columns) == 0 {
+		return "", nil, errors.New("at least one column must be defined")
+	}
+
+	dialect := b.dialect
+	if dialect == nil {
+		dialect = getDialect()
+	}
+
+	var sb strings.Builder
+	args := []interface{}{}
+
+	// CREATE TABLE
+	sb.WriteString("CREATE ")
+	if b.temporary {
+		sb.WriteString("TEMPORARY ")
+	}
+	sb.WriteString("TABLE ")
+	if b.ifNotExists {
+		sb.WriteString("IF NOT EXISTS ")
+	}
+	sb.WriteString(dialect.QuoteIdent(b.tableName))
+	sb.WriteString(" (")
+
+	// Columns
+	columnSQLs := make([]string, 0, len(b.columns))
+	for _, col := range b.columns {
+		colSQL, err := col.buildSQL(dialect)
+		if err != nil {
+			return "", nil, fmt.Errorf("column %s: %w", col.Name, err)
+		}
+		columnSQLs = append(columnSQLs, colSQL)
+	}
+
+	// Constraints
+	for _, constraint := range b.constraints {
+		constraintSQL, err := constraint.buildSQL(dialect)
+		if err != nil {
+			return "", nil, fmt.Errorf("constraint: %w", err)
+		}
+		columnSQLs = append(columnSQLs, constraintSQL)
+	}
+
+	sb.WriteString(strings.Join(columnSQLs, ", "))
+	sb.WriteString(")")
+
+	// Table options in order
+	if len(b.options) > 0 {
+		optionSQLs := make([]string, 0, len(b.options))
+		for _, opt := range b.options {
+			if opt.Value == "" {
+				optionSQLs = append(optionSQLs, opt.Name)
+			} else {
+				if opt.Name == "COMMENT" {
+					optionSQLs = append(optionSQLs, fmt.Sprintf("%s %s", opt.Name, dialect.QuoteString(opt.Value)))
+				} else {
+					optionSQLs = append(optionSQLs, fmt.Sprintf("%s %s", opt.Name, opt.Value))
+				}
+			}
+		}
+		sb.WriteString(" ")
+		sb.WriteString(strings.Join(optionSQLs, " "))
+	}
+
+	return sb.String(), args, nil
+}
+
+// DebugSQL returns the SQL with arguments interpolated for debugging/logging only.
+// DO NOT use the result for execution (not safe against SQL injection).
+func (b *CreateTableBuilder) DebugSQL() string {
+	sql, args, _ := b.Build()
+	return InterpolateSQL(sql, args)
+}
+
+// Column constraint methods that can be chained after convenience methods
+
+// NotNull makes the last added column not null.
+func (b *CreateTableBuilder) NotNull() *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if len(b.columns) == 0 {
+		b.err = errors.New("no column to modify")
+		return b
+	}
+	nullable := false
+	b.columns[len(b.columns)-1].Nullable = &nullable
+	return b
+}
+
+// Nullable makes the last added column nullable.
+func (b *CreateTableBuilder) Nullable() *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if len(b.columns) == 0 {
+		b.err = errors.New("no column to modify")
+		return b
+	}
+	nullable := true
+	b.columns[len(b.columns)-1].Nullable = &nullable
+	return b
+}
+
+// Default sets the default value for the last added column.
+func (b *CreateTableBuilder) Default(value interface{}) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if len(b.columns) == 0 {
+		b.err = errors.New("no column to modify")
+		return b
+	}
+	b.columns[len(b.columns)-1].Default = value
+	return b
+}
+
+// AutoIncrement makes the last added column auto-incrementing.
+func (b *CreateTableBuilder) AutoIncrement() *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if len(b.columns) == 0 {
+		b.err = errors.New("no column to modify")
+		return b
+	}
+	b.columns[len(b.columns)-1].AutoIncrement = true
+	return b
+}
+
+// ColumnCollation sets the collation for the last added column.
+func (b *CreateTableBuilder) ColumnCollation(collation string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if len(b.columns) == 0 {
+		b.err = errors.New("no column to modify")
+		return b
+	}
+	b.columns[len(b.columns)-1].Collation = collation
+	return b
+}
+
+// ColumnCharset sets the character set for the last added column.
+func (b *CreateTableBuilder) ColumnCharset(charset string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if len(b.columns) == 0 {
+		b.err = errors.New("no column to modify")
+		return b
+	}
+	b.columns[len(b.columns)-1].Charset = charset
+	return b
+}
+
+// ColumnComment sets the comment for the last added column.
+func (b *CreateTableBuilder) ColumnComment(comment string) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if len(b.columns) == 0 {
+		b.err = errors.New("no column to modify")
+		return b
+	}
+	b.columns[len(b.columns)-1].Comment = comment
+	return b
+}

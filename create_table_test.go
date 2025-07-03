@@ -1,0 +1,663 @@
+package cqb
+
+import (
+	"testing"
+)
+
+func init() {
+	SetDialect(Standard())
+}
+
+func TestCreateTableBuilder(t *testing.T) {
+	t.Run("basic create table", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			AddColumn(Column("name").Type("VARCHAR").Size(255).NotNull())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (id INT NOT NULL, name VARCHAR(255) NOT NULL)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with if not exists", func(t *testing.T) {
+		q := CreateTable("users").
+			IfNotExists().
+			AddColumn(Column("id").Type("INT").NotNull())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE IF NOT EXISTS users (id INT NOT NULL)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create temporary table", func(t *testing.T) {
+		q := CreateTable("temp_users").
+			Temporary().
+			AddColumn(Column("id").Type("INT").NotNull())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TEMPORARY TABLE temp_users (id INT NOT NULL)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with primary key", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			AddColumn(Column("name").Type("VARCHAR").Size(255)).
+			PrimaryKey("id")
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (id INT NOT NULL, name VARCHAR(255), PRIMARY KEY (id))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with unique constraint", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			AddColumn(Column("email").Type("VARCHAR").Size(255)).
+			Unique("idx_email", "email")
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (id INT NOT NULL, email VARCHAR(255), CONSTRAINT idx_email UNIQUE (email))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with check constraint", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			AddColumn(Column("age").Type("INT")).
+			Check("chk_age", "age >= 0")
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (id INT NOT NULL, age INT, CONSTRAINT chk_age CHECK (age >= 0))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with index", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			AddColumn(Column("name").Type("VARCHAR").Size(255)).
+			Index("idx_name", "name")
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (id INT NOT NULL, name VARCHAR(255), INDEX idx_name (name))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with foreign key", func(t *testing.T) {
+		q := CreateTable("orders").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			AddColumn(Column("user_id").Type("INT")).
+			AddForeignKey(
+				ForeignKey("fk_orders_user", "user_id").
+					References("users", "id").
+					OnDelete("CASCADE"),
+			)
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE orders (id INT NOT NULL, user_id INT, CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with table options", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			Charset("utf8mb4").
+			Collation("utf8mb4_unicode_ci").
+			Comment("User accounts table").
+			Engine("InnoDB")
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (id INT NOT NULL) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'User accounts table' ENGINE InnoDB"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+}
+
+func TestColumnBuilder(t *testing.T) {
+	t.Run("column with size", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("name").Type("VARCHAR").Size(100).NotNull())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (name VARCHAR(100) NOT NULL)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("column with precision and scale", func(t *testing.T) {
+		q := CreateTable("products").
+			AddColumn(Column("price").Type("DECIMAL").Precision(10, 2).NotNull())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE products (price DECIMAL(10,2) NOT NULL)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("column with default value", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("status").Type("VARCHAR").Size(20).Default("active")).
+			AddColumn(Column("created_at").Type("TIMESTAMP").Default(Raw("CURRENT_TIMESTAMP")))
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (status VARCHAR(20) DEFAULT 'active', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("column with auto increment", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull().AutoIncrement())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (id INT NOT NULL AUTO_INCREMENT)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("column with big auto increment", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("BIGINT").NotNull().AutoIncrement())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (id BIGINT NOT NULL AUTO_INCREMENT)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("column with charset and collation", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("name").Type("VARCHAR").Size(255).Charset("utf8mb4").Collation("utf8mb4_unicode_ci"))
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("column with comment", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull().Comment("Primary key"))
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (id INT NOT NULL COMMENT 'Primary key')"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("column with raw SQL default", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("status").Type("VARCHAR").Default("active")).                       // String literal
+			AddColumn(Column("created_at").Type("TIMESTAMP").Default(Raw("CURRENT_TIMESTAMP"))). // Raw SQL
+			AddColumn(Column("count").Type("INT").Default(0))                                    // Number literal
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE users (status VARCHAR DEFAULT 'active', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, count INT DEFAULT 0)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+}
+
+func TestCreateTableBuilder_Errors(t *testing.T) {
+	t.Run("empty table name", func(t *testing.T) {
+		_, _, err := CreateTable("").Build()
+		if err == nil {
+			t.Errorf("expected error for empty table name, got none")
+		}
+	})
+
+	t.Run("no columns", func(t *testing.T) {
+		_, _, err := CreateTable("users").Build()
+		if err == nil {
+			t.Errorf("expected error for no columns, got none")
+		}
+	})
+
+	t.Run("column without type", func(t *testing.T) {
+		q := CreateTable("users").AddColumn(Column("id"))
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error for column without type, got none")
+		}
+	})
+
+	t.Run("empty column name", func(t *testing.T) {
+		q := CreateTable("users").AddColumn(Column(""))
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error for empty column name, got none")
+		}
+	})
+
+	t.Run("invalid size", func(t *testing.T) {
+		q := CreateTable("users").AddColumn(Column("name").Type("VARCHAR").Size(0))
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error for invalid size, got none")
+		}
+	})
+
+	t.Run("invalid precision", func(t *testing.T) {
+		q := CreateTable("users").AddColumn(Column("price").Type("DECIMAL").Precision(0, 2))
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error for invalid precision, got none")
+		}
+	})
+
+	t.Run("invalid scale", func(t *testing.T) {
+		q := CreateTable("users").AddColumn(Column("price").Type("DECIMAL").Precision(10, 11))
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error for invalid scale, got none")
+		}
+	})
+
+	t.Run("primary key without columns", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			PrimaryKey()
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error for primary key without columns, got none")
+		}
+	})
+
+	t.Run("unique constraint without columns", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			Unique("idx_test")
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error for unique constraint without columns, got none")
+		}
+	})
+
+	t.Run("check constraint without expression", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			Check("chk_test", "")
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error for check constraint without expression, got none")
+		}
+	})
+
+	t.Run("foreign key without name", func(t *testing.T) {
+		q := CreateTable("orders").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			ForeignKey("", "user_id").
+			References("users", "id").
+			Build()
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error for foreign key without name, got none")
+		}
+	})
+
+	t.Run("foreign key without columns", func(t *testing.T) {
+		q := CreateTable("orders").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			ForeignKey("fk_test").
+			References("users", "id").
+			Build()
+		_, _, err := q.Build()
+		if err == nil {
+			t.Errorf("expected error for foreign key without columns, got none")
+		}
+	})
+}
+
+func TestCreateTableBuilder_Dialect(t *testing.T) {
+	t.Run("MySQL dialect", func(t *testing.T) {
+		SetDialect(MySQL())
+		defer SetDialect(Standard())
+
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			AddColumn(Column("name").Type("VARCHAR").Size(255))
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE `users` (`id` INT NOT NULL, `name` VARCHAR(255))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("Postgres dialect", func(t *testing.T) {
+		SetDialect(Postgres())
+		defer SetDialect(Standard())
+
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INTEGER").NotNull()).
+			AddColumn(Column("name").Type("VARCHAR").Size(255))
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE \"users\" (\"id\" INTEGER NOT NULL, \"name\" VARCHAR(255))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+}
+
+func TestCreateTableBuilder_Complex(t *testing.T) {
+	t.Run("complex table with all features", func(t *testing.T) {
+		q := CreateTable("users").
+			IfNotExists().
+			AddColumn(Column("id").Type("INT").NotNull().AutoIncrement().Comment("Primary key")).
+			AddColumn(Column("username").Type("VARCHAR").Size(50).NotNull()).
+			AddColumn(Column("email").Type("VARCHAR").Size(255).NotNull()).
+			AddColumn(Column("password_hash").Type("VARCHAR").Size(255).NotNull()).
+			AddColumn(Column("age").Type("INT").Default(18)).
+			AddColumn(Column("created_at").Type("TIMESTAMP").Default(Raw("CURRENT_TIMESTAMP"))).
+			AddColumn(Column("updated_at").Type("TIMESTAMP").Default(Raw("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"))).
+			PrimaryKey("id").
+			Unique("idx_username", "username").
+			Unique("idx_email", "email").
+			Check("chk_age", "age >= 0 AND age <= 150").
+			Index("idx_created_at", "created_at").
+			Charset("utf8mb4").
+			Collation("utf8mb4_unicode_ci").
+			Comment("User accounts table").
+			Engine("InnoDB")
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE IF NOT EXISTS users (id INT NOT NULL AUTO_INCREMENT COMMENT 'Primary key', username VARCHAR(50) NOT NULL, email VARCHAR(255) NOT NULL, password_hash VARCHAR(255) NOT NULL, age INT DEFAULT 18, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id), CONSTRAINT idx_username UNIQUE (username), CONSTRAINT idx_email UNIQUE (email), CONSTRAINT chk_age CHECK (age >= 0 AND age <= 150), INDEX idx_created_at (created_at)) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'User accounts table' ENGINE InnoDB"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+}
+
+func TestCreateTableBuilder_Postgres(t *testing.T) {
+	t.Run("basic create table (postgres)", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			AddColumn(Column("name").Type("VARCHAR").Size(255).NotNull()).
+			WithDialect(Postgres())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE \"users\" (\"id\" INT NOT NULL, \"name\" VARCHAR(255) NOT NULL)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with table options (postgres)", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			Charset("utf8mb4").
+			Collation("utf8mb4_unicode_ci").
+			Comment("User accounts table").
+			Engine("InnoDB").
+			WithDialect(Postgres())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE \"users\" (\"id\" INT NOT NULL) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'User accounts table' ENGINE InnoDB"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with unique constraint (postgres)", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			AddColumn(Column("email").Type("VARCHAR").Size(255)).
+			Unique("idx_email", "email").
+			WithDialect(Postgres())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE \"users\" (\"id\" INT NOT NULL, \"email\" VARCHAR(255), CONSTRAINT \"idx_email\" UNIQUE (\"email\"))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with foreign key (postgres)", func(t *testing.T) {
+		q := CreateTable("orders").
+			AddColumn(Column("id").Type("INT").NotNull()).
+			AddColumn(Column("user_id").Type("INT")).
+			AddForeignKey(
+				ForeignKey("fk_orders_user", "user_id").
+					References("users", "id").
+					OnDelete("CASCADE"),
+			).WithDialect(Postgres())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE \"orders\" (\"id\" INT NOT NULL, \"user_id\" INT, CONSTRAINT \"fk_orders_user\" FOREIGN KEY (\"user_id\") REFERENCES \"users\" (\"id\") ON DELETE CASCADE)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with auto increment (postgres)", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("INT").NotNull().AutoIncrement()).
+			WithDialect(Postgres())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE \"users\" (\"id\" SERIAL NOT NULL)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with big auto increment (postgres)", func(t *testing.T) {
+		q := CreateTable("users").
+			AddColumn(Column("id").Type("BIGINT").NotNull().AutoIncrement()).
+			WithDialect(Postgres())
+
+		sql, args, err := q.Build()
+		wantSQL := "CREATE TABLE \"users\" (\"id\" BIGSERIAL NOT NULL)"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+}

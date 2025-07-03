@@ -1,11 +1,10 @@
-# cqb
+# Composable Query Builder
 
 A SQL query builder for Go.
 
 [![CI](https://github.com/sprylic/cqb-dev/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sprylic/cqb-dev/actions/workflows/ci.yml)
 
 ## Goals
-- **Lightweight**: Minimal abstractions, no heavy ORM features.
 - **Thread Safe**: Safe for concurrent use.
 - **Database Agnostic**: Works with any database that implements Go's `database/sql` interface.
 - **Simple API**: Make common queries (SELECT, INSERT, UPDATE, DELETE) easy, but allow for custom/raw SQL.
@@ -23,7 +22,7 @@ A SQL query builder for Go.
 Set the dialect globally for your application:
 
 ```go
-import "github.com/yourusername/sq"
+import "github.com/sprylic/cqb"
 
 sq.SetDialect(sq.Postgres()) // or sq.MySQL(), sq.Standard()
 ```

@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -11,6 +12,7 @@ import (
 type Dialect interface {
 	Placeholder(n int) string
 	QuoteIdent(ident string) string
+	QuoteString(s string) string
 }
 
 // standardDialect uses ? for all placeholders and no identifier quoting.
@@ -18,18 +20,25 @@ type standardDialect struct{}
 
 func (standardDialect) Placeholder(n int) string       { return "?" }
 func (standardDialect) QuoteIdent(ident string) string { return ident }
+func (standardDialect) QuoteString(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+}
 
 // mySQLDialect uses ? for all placeholders and backticks for identifier quoting.
 type mySQLDialect struct{}
 
 func (mySQLDialect) Placeholder(n int) string       { return "?" }
 func (mySQLDialect) QuoteIdent(ident string) string { return "`" + ident + "`" }
+func (mySQLDialect) QuoteString(s string) string    { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
 
 // postgresDialect uses $n for placeholders and double quotes for identifier quoting.
 type postgresDialect struct{}
 
 func (postgresDialect) Placeholder(n int) string       { return "$" + fmt.Sprint(n) }
 func (postgresDialect) QuoteIdent(ident string) string { return "\"" + ident + "\"" }
+func (postgresDialect) QuoteString(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+}
 
 var (
 	standardDialectInstance = standardDialect{}
