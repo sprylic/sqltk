@@ -19,6 +19,10 @@ func TestMySQLIntegration(t *testing.T) {
 	if dsn == "" {
 		dsn = "root:password@tcp(localhost:3306)/"
 	}
+
+	// TODO DO NOT COMMIT
+	dsn = dsn + "?allowNativePasswords=true"
+
 	// Connect to MySQL without specifying a test database
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
@@ -119,7 +123,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 		}
 		_, err = db.Exec(sqlStr, args...)
 		if err != nil {
-			t.Fatalf("create table exec: %v", err)
+			t.Fatalf("create table exec: %v\n%s", err, sqlStr)
 		}
 	})
 
@@ -132,7 +136,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 		}
 		_, err = db.Exec(sqlStr, args...)
 		if err != nil {
-			t.Fatalf("create index exec: %v", err)
+			t.Fatalf("create index exec: %v\n%s", err, sqlStr)
 		}
 	})
 
@@ -146,7 +150,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 		}
 		_, err = db.Exec(sqlStr, args...)
 		if err != nil {
-			t.Fatalf("create view exec: %v", err)
+			t.Fatalf("create view exec: %v\n%s", err, sqlStr)
 		}
 	})
 
@@ -165,7 +169,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 		}
 		_, err = db.Exec(sqlStr, args...)
 		if err != nil {
-			t.Fatalf("alter table exec: %v", err)
+			t.Fatalf("alter table exec: %v\n%s", err, sqlStr)
 		}
 	})
 }
@@ -181,7 +185,7 @@ func testMySQLCRUD(t *testing.T, db *sql.DB) {
 		}
 		result, err := db.Exec(sqlStr, args...)
 		if err != nil {
-			t.Fatalf("insert exec: %v", err)
+			t.Fatalf("insert exec: %v\n%s", err, sqlStr)
 		}
 		insertID, _ := result.LastInsertId()
 
@@ -195,7 +199,7 @@ func testMySQLCRUD(t *testing.T, db *sql.DB) {
 		var name, email string
 		err = db.QueryRow(sqlStr, args...).Scan(&id, &name, &email)
 		if err != nil {
-			t.Fatalf("select query: %v", err)
+			t.Fatalf("select query: %v\n%s", err, sqlStr)
 		}
 		if name != "Bob" {
 			t.Errorf("expected name Bob, got %s", name)
@@ -209,7 +213,7 @@ func testMySQLCRUD(t *testing.T, db *sql.DB) {
 		}
 		_, err = db.Exec(sqlStr, args...)
 		if err != nil {
-			t.Fatalf("update exec: %v", err)
+			t.Fatalf("update exec: %v\n%s", err, sqlStr)
 		}
 
 		// Delete
@@ -220,7 +224,7 @@ func testMySQLCRUD(t *testing.T, db *sql.DB) {
 		}
 		_, err = db.Exec(sqlStr, args...)
 		if err != nil {
-			t.Fatalf("delete exec: %v", err)
+			t.Fatalf("delete exec: %v\n%s", err, sqlStr)
 		}
 	})
 }
@@ -244,7 +248,7 @@ func testMySQLAdvanced(t *testing.T, db *sql.DB) {
 
 		rows, err := db.Query(sqlStr, args...)
 		if err != nil {
-			t.Fatalf("complex select query: %v", err)
+			t.Fatalf("complex select query: %v\n%s", err, sqlStr)
 		}
 		defer rows.Close()
 
