@@ -1,8 +1,8 @@
 # SQL Tool Kit
 
-A SQL toolkit for Go that provides composable query building and DDL operations.
-
 [![CI](https://github.com/sprylic/sqltk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sprylic/sqltk/actions/workflows/ci.yml)
+
+A SQL toolkit for Go that provides composable query building and DDL operations.
 
 ## Goals
 - **Thread Safe**: Safe for concurrent use.
@@ -15,10 +15,10 @@ A SQL toolkit for Go that provides composable query building and DDL operations.
 - If you use Postgres or another database, **set the dialect explicitly**:
   ```go
   sqltk.SetDialect(sqltk.Postgres()) // for Postgres
-  sqltk.SetDialect(sqltk.Standard()) // for no quoting (legacy/ANSI)
-  
-  q := sqltk.Select("id", "name").From("users").Where("active = ?", true) // set dialect per builder.
-  sql, args, err := q.WithDialect(sqltk.PostGres()).Build()
+sqltk.SetDialect(sqltk.Standard()) // for no quoting (legacy/ANSI)
+
+q := sqltk.Select("id", "name").From("users").Where(sqltk.NewStringCondition("active = ?", true)) // set dialect per builder.
+sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
   ```
 
 ### ⚠️ Setting the dialect globally can cause issues when using different dialects concurrently. If you need to support a different dialect, use WithDialect on the builder instead.
@@ -36,7 +36,7 @@ sqltk.SetDialect(sqltk.Postgres()) // or sqltk.MySQL(), sqltk.Standard()
 
 ### SELECT
 ```go
-q := sqltk.Select("id", "name").From("users").Where("active = ?", true)
+q := sqltk.Select("id", "name").From("users").Where(sqltk.NewStringCondition("active = ?", true))
 sql, args, err := q.Build()
 // sql: "SELECT `id`, `name` FROM `users` WHERE active = ?" (MySQL dialect by default)
 // args: [true]
@@ -44,7 +44,7 @@ sql, args, err := q.Build()
 
 ### Aliasing and Subqueries
 ```go
-sub := sqltk.Select("COUNT(*)").From("orders").Where("orders.user_id = users.id")
+sub := sqltk.Select(sqltk.Raw("COUNT(*)")).From("orders").WhereEqual("orders.user_id", "users.id")
 q := sqltk.Select(sqltk.Alias(sub, "order_count")).From("users")
 sql, args, err := q.Build()
 // sql: "SELECT (SELECT COUNT(*) FROM orders WHERE orders.user_id = users.id) AS order_count FROM `users`"
@@ -53,10 +53,10 @@ sql, args, err := q.Build()
 ### Query Composition
 ```go
 isActive := func(b *sqltk.SelectBuilder) *sqltk.SelectBuilder {
-    return b.Where("active = ?", true)
+    return b.Where(sqltk.NewStringCondition("active = ?", true))
 }
 isAdult := func(b *sqltk.SelectBuilder) *sqltk.SelectBuilder {
-    return b.Where("age >= ?", 18)
+    return b.Where(sqltk.NewStringCondition("age >= ?", 18))
 }
 q := sqltk.Select("id").From("users").Compose(isActive, isAdult)
 sql, args, err := q.Build()
@@ -70,15 +70,15 @@ The `ConditionBuilder` provides a fluent, composable API for building complex SQ
 
 **Type-Safe Conditions:**
 
-The library now provides a `Condition` interface for type-safe condition handling. This prevents unsafe queries and makes the API more explicit. The `Where()` and `Having()` methods now accept only `Condition` types:
+The library provides a `Condition` interface for type-safe condition handling. This prevents unsafe queries and makes the API more explicit. The `Where()` and `Having()` methods accept only `Condition` types:
 
 ```go
 // Type-safe string condition
 cond := sqltk.NewStringCondition("active = ? AND age > ?", true, 18)
 q := sqltk.Select("id").From("users").Where(cond)
 
-// Type-safe raw condition (requires AsCondition wrapper)
-cond := sqltk.AsCondition(sqltk.Raw("id = 1"))
+// Type-safe raw condition (Raw implements Condition)
+cond := sqltk.Raw("id = 1")
 q := sqltk.Select("id").From("users").Where(cond)
 
 // ConditionBuilder (implements Condition interface)
@@ -88,7 +88,7 @@ q := sqltk.Select("id").From("users").Where(cond)
 // Compile-time type safety - these will not compile:
 // q.Where("active = ?", true)           // Error: string doesn't implement Condition
 // q.Where(123)                          // Error: int doesn't implement Condition
-// q.Where(sqltk.Raw("id = 1"))            // Error: Raw doesn't implement Condition
+// q.Where(sqltk.Raw("id = 1"))         // Error: Raw doesn't implement Condition
 ```
 
 **Interface Design:**
@@ -103,9 +103,8 @@ type Condition interface {
 
 All condition types implement this interface:
 - `*StringCondition` - for parameterized string conditions
-- `*RawCondition` - for raw SQL conditions  
+- `Raw` - for raw SQL conditions (directly implements Condition)
 - `*ConditionBuilder` - for fluent condition building
-- `AsCondition(Raw)` - helper to convert Raw to Condition
 
 **Examples:**
 
@@ -147,15 +146,15 @@ sql, args, err := q.Build()
 - All methods are chainable and support table-qualified columns and dialect quoting.
 
 **Type Safety:**
-String conditions must now use explicit wrappers to prevent SQL injection:
+String conditions must use explicit wrappers to prevent SQL injection:
 ```go
-// ❌ This will now cause an error
+// ❌ This will cause an error
 q := sqltk.Select("id").From("users").Where("active = ?", true)
 
 // ✅ Use explicit wrapper for string conditions
 q := sqltk.Select("id").From("users").Where(sqltk.NewStringCondition("active = ?", true))
 
-// ✅ Raw conditions still work (explicitly marked as raw)
+// ✅ Raw conditions work directly (implements Condition interface)
 q := sqltk.Select("id").From("users").Where(sqltk.Raw("id = 1"))
 ```
 
@@ -169,7 +168,7 @@ sql, args, err := q.Build()
 
 ### UPDATE
 ```go
-q := sqltk.Update("users").Set("name", "Alice").Where("id = ?", 1)
+q := sqltk.Update("users").Set("name", "Alice").Where(sqltk.NewStringCondition("id = ?", 1))
 sql, args, err := q.Build()
 // sql: "UPDATE `users` SET `name` = ? WHERE id = ?"
 // args: ["Alice", 1]
@@ -177,7 +176,7 @@ sql, args, err := q.Build()
 
 ### DELETE
 ```go
-q := sqltk.Delete("users").Where("id = ?", 1)
+q := sqltk.Delete("users").Where(sqltk.NewStringCondition("id = ?", 1))
 sql, args, err := q.Build()
 // sql: "DELETE FROM `users` WHERE id = ?"
 // args: [1]
@@ -292,7 +291,7 @@ sql, _, err := dropView.Build()
 #### MySQL (default)
 ```go
 // No need to set dialect for MySQL, it's the default
-q := sqltk.Select("id", "name").From("users").Where("id = ?", 1)
+q := sqltk.Select("id", "name").From("users").Where(sqltk.NewStringCondition("id = ?", 1))
 sql, args, err := q.Build()
 // sql: "SELECT `id`, `name` FROM `users` WHERE id = ?"
 ```
@@ -300,7 +299,7 @@ sql, args, err := q.Build()
 #### Postgres
 ```go
 sqltk.SetDialect(sqltk.Postgres())
-q := sqltk.Select("id", "name").From("users").Where("id = ? AND name = ?", 1, "bob")
+q := sqltk.Select("id", "name").From("users").Where(sqltk.NewStringCondition("id = ? AND name = ?", 1, "bob"))
 sql, args, err := q.Build()
 // sql: "SELECT \"id\", \"name\" FROM \"users\" WHERE id = $1 AND name = $2"
 ```

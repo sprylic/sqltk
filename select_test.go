@@ -210,7 +210,7 @@ func TestSelectBuilder_GroupBy_Having_OrderBy(t *testing.T) {
 	})
 
 	t.Run("having raw", func(t *testing.T) {
-		q := Select("id").From("users").GroupBy("id").Having(AsCondition(Raw("COUNT(*) > 1")))
+		q := Select("id").From("users").GroupBy("id").Having(AsCondition("COUNT(*) > 1"))
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id FROM users GROUP BY id HAVING COUNT(*) > 1"
 		if err != nil {
@@ -424,7 +424,7 @@ func TestSelectBuilder_Distinct_Subquery(t *testing.T) {
 	})
 
 	t.Run("subquery as column", func(t *testing.T) {
-		sub := Select("COUNT(*)").From("posts").Where(Raw("posts.user_id = users.id"))
+		sub := Select(Raw("COUNT(*)")).From("posts").Where(Raw("posts.user_id = users.id"))
 		q := Select("id", sub).From("users")
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id, (SELECT COUNT(*) FROM posts WHERE posts.user_id = users.id) FROM users"
