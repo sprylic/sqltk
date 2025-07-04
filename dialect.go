@@ -1,6 +1,6 @@
-package stk
+package sqltk
 
-import "github.com/sprylic/stk/shared"
+import "github.com/sprylic/sqltk/shared"
 
 // Re-export shared types for backward compatibility
 type (

@@ -1,6 +1,6 @@
 //go:build integration
 
-package stk
+package sqltk
 
 import (
 	"database/sql"
@@ -13,7 +13,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/sprylic/stk/ddl"
+	"github.com/sprylic/sqltk/ddl"
 )
 
 func TestPostgresIntegration(t *testing.T) {
@@ -38,8 +38,8 @@ func TestPostgresIntegration(t *testing.T) {
 		return string(b)
 	}()
 
-	testDBName := "stk_test_db_" + suffix
-	testSchema := "stk_test_schema_" + suffix
+	testDBName := "sqltk_test_db_" + suffix
+	testSchema := "sqltk_test_schema_" + suffix
 
 	// Create test database (PostgreSQL doesn't support IF NOT EXISTS for CREATE DATABASE)
 	createDB := ddl.CreateDatabase(testDBName)

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/sprylic/stk/shared"
+	"github.com/sprylic/sqltk/shared"
 )
 
 // CreateIndexBuilder builds SQL CREATE INDEX queries.

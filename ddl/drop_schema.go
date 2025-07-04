@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/sprylic/stk/shared"
+	"github.com/sprylic/sqltk/shared"
 )
 
 // DropSchemaBuilder builds DROP SCHEMA statements.

@@ -1,4 +1,4 @@
-package stk
+package sqltk
 
 import (
 	"errors"
@@ -130,13 +130,13 @@ type JoinBuilder struct {
 //   - string: table name (optionally with alias, e.g. "users u")
 //   - Raw: raw SQL for the table
 //   - *SelectBuilder: subquery as table
-//   - AliasExpr: alias for a table or subquery (use stk.Alias)
+//   - AliasExpr: alias for a table or subquery (use sqltk.Alias)
 //
 // Example usage:
 //
 //	Join("orders o")
-//	Join(stk.Alias("orders", "o"))
-//	Join(stk.Alias(stk.Select("id").From("orders"), "o"))
+//	Join(sqltk.Alias("orders", "o"))
+//	Join(sqltk.Alias(sqltk.Select("id").From("orders"), "o"))
 func (b *SelectBuilder) Join(table interface{}) *JoinBuilder {
 	return &JoinBuilder{parent: b, joinType: "JOIN", joinTable: table}
 }
@@ -145,13 +145,13 @@ func (b *SelectBuilder) Join(table interface{}) *JoinBuilder {
 //   - string: table name (optionally with alias)
 //   - Raw: raw SQL for the table
 //   - *SelectBuilder: subquery as table
-//   - AliasExpr: alias for a table or subquery (use stk.Alias)
+//   - AliasExpr: alias for a table or subquery (use sqltk.Alias)
 //
 // Example usage:
 //
 //	LeftJoin("orders o")
-//	LeftJoin(stk.Alias("orders", "o"))
-//	LeftJoin(stk.Alias(stk.Select("id").From("orders"), "o"))
+//	LeftJoin(sqltk.Alias("orders", "o"))
+//	LeftJoin(sqltk.Alias(sqltk.Select("id").From("orders"), "o"))
 func (b *SelectBuilder) LeftJoin(table interface{}) *JoinBuilder {
 	return &JoinBuilder{parent: b, joinType: "LEFT JOIN", joinTable: table}
 }
@@ -160,13 +160,13 @@ func (b *SelectBuilder) LeftJoin(table interface{}) *JoinBuilder {
 //   - string: table name (optionally with alias)
 //   - Raw: raw SQL for the table
 //   - *SelectBuilder: subquery as table
-//   - AliasExpr: alias for a table or subquery (use stk.Alias)
+//   - AliasExpr: alias for a table or subquery (use sqltk.Alias)
 //
 // Example usage:
 //
 //	RightJoin("orders o")
-//	RightJoin(stk.Alias("orders", "o"))
-//	RightJoin(stk.Alias(stk.Select("id").From("orders"), "o"))
+//	RightJoin(sqltk.Alias("orders", "o"))
+//	RightJoin(sqltk.Alias(sqltk.Select("id").From("orders"), "o"))
 func (b *SelectBuilder) RightJoin(table interface{}) *JoinBuilder {
 	return &JoinBuilder{parent: b, joinType: "RIGHT JOIN", joinTable: table}
 }
@@ -175,13 +175,13 @@ func (b *SelectBuilder) RightJoin(table interface{}) *JoinBuilder {
 //   - string: table name (optionally with alias)
 //   - Raw: raw SQL for the table
 //   - *SelectBuilder: subquery as table
-//   - AliasExpr: alias for a table or subquery (use stk.Alias)
+//   - AliasExpr: alias for a table or subquery (use sqltk.Alias)
 //
 // Example usage:
 //
 //	FullJoin("orders o")
-//	FullJoin(stk.Alias("orders", "o"))
-//	FullJoin(stk.Alias(stk.Select("id").From("orders"), "o"))
+//	FullJoin(sqltk.Alias("orders", "o"))
+//	FullJoin(sqltk.Alias(sqltk.Select("id").From("orders"), "o"))
 func (b *SelectBuilder) FullJoin(table interface{}) *JoinBuilder {
 	return &JoinBuilder{parent: b, joinType: "FULL JOIN", joinTable: table}
 }

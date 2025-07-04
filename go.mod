@@ -1,4 +1,4 @@
-module github.com/sprylic/stk
+module github.com/sprylic/sqltk
 
 go 1.24
 

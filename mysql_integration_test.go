@@ -1,6 +1,6 @@
 //go:build integration
 
-package stk
+package sqltk
 
 import (
 	"database/sql"
@@ -11,7 +11,7 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/sprylic/stk/ddl"
+	"github.com/sprylic/sqltk/ddl"
 )
 
 func TestMySQLIntegration(t *testing.T) {
@@ -40,7 +40,7 @@ func TestMySQLIntegration(t *testing.T) {
 		return string(b)
 	}()
 
-	testDBName := "stk_test_db_" + suffix
+	testDBName := "sqltk_test_db_" + suffix
 
 	// Create test database
 	createDB := ddl.CreateDatabase(testDBName).IfNotExists().Charset("utf8mb4").Collation("utf8mb4_unicode_ci")

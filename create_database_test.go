@@ -1,10 +1,10 @@
-package stk
+package sqltk
 
 import (
 	"testing"
 
-	"github.com/sprylic/stk/ddl"
-	"github.com/sprylic/stk/shared"
+	"github.com/sprylic/sqltk/ddl"
+	"github.com/sprylic/sqltk/shared"
 )
 
 func TestCreateDatabase(t *testing.T) {

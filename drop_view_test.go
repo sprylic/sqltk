@@ -1,9 +1,9 @@
-package stk
+package sqltk
 
 import (
 	"testing"
 
-	"github.com/sprylic/stk/ddl"
+	"github.com/sprylic/sqltk/ddl"
 )
 
 func TestDropViewBuilder(t *testing.T) {

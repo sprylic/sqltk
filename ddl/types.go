@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sprylic/stk/shared"
+	"github.com/sprylic/sqltk/shared"
 )
 
 // ColumnDef represents a column definition in a CREATE TABLE statement.

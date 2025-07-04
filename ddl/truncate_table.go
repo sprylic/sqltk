@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/sprylic/stk/shared"
+	"github.com/sprylic/sqltk/shared"
 )
 
 // TruncateTableBuilder builds SQL TRUNCATE TABLE queries.

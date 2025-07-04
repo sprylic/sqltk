@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/sprylic/stk"
-	"github.com/sprylic/stk/ddl"
+	"github.com/sprylic/sqltk"
+	"github.com/sprylic/sqltk/ddl"
 )
 
 func main() {
 	// Set dialect (optional, MySQL is default)
-	stk.SetDialect(stk.Standard())
+	sqltk.SetDialect(sqltk.Standard())
 
 	fmt.Println("=== TRUNCATE TABLE Examples ===")
 	fmt.Println()
@@ -56,7 +56,7 @@ func main() {
 	fmt.Println()
 
 	// Truncate with restart identity (PostgreSQL)
-	truncateRestart := ddl.TruncateTable("users").Restart().WithDialect(stk.Postgres())
+	truncateRestart := ddl.TruncateTable("users").Restart().WithDialect(sqltk.Postgres())
 	sql, args, err = truncateRestart.Build()
 	if err != nil {
 		log.Fatal(err)
@@ -65,7 +65,7 @@ func main() {
 	fmt.Printf("Args: %v\n\n", args)
 
 	// Truncate with continue identity (PostgreSQL)
-	truncateContinue := ddl.TruncateTable("users").Continue().WithDialect(stk.Postgres())
+	truncateContinue := ddl.TruncateTable("users").Continue().WithDialect(sqltk.Postgres())
 	sql, args, err = truncateContinue.Build()
 	if err != nil {
 		log.Fatal(err)
@@ -77,7 +77,7 @@ func main() {
 	truncateComplex := ddl.TruncateTable("users", "orders").
 		Restart().
 		Cascade().
-		WithDialect(stk.Postgres())
+		WithDialect(sqltk.Postgres())
 	sql, args, err = truncateComplex.Build()
 	if err != nil {
 		log.Fatal(err)
@@ -89,7 +89,7 @@ func main() {
 	fmt.Println("=== MySQL Examples ===")
 	fmt.Println()
 
-	truncateMySQL := ddl.TruncateTable("users").WithDialect(stk.MySQL())
+	truncateMySQL := ddl.TruncateTable("users").WithDialect(sqltk.MySQL())
 	sql, args, err = truncateMySQL.Build()
 	if err != nil {
 		log.Fatal(err)

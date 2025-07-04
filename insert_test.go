@@ -1,4 +1,4 @@
-package stk
+package sqltk
 
 import (
 	"encoding/json"
