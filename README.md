@@ -221,15 +221,29 @@ sql, _, err := dropSchema.Build()
 
 ### Table Operations
 ```go
-// Create table
+// Create table with primary key specified on column
 createTable := ddl.CreateTable("users").
-    AddColumn(ddl.Column("id").Type("INT").AutoIncrement().NotNull()).
+    AddColumn(ddl.Column("id").Type("INT").AutoIncrement().NotNull().PrimaryKey()).
     AddColumn(ddl.Column("name").Type("VARCHAR").Size(255).NotNull()).
     AddColumn(ddl.Column("email").Type("VARCHAR").Size(255)).
-    PrimaryKey("id").
     Unique("idx_email", "email")
 sql, _, err := createTable.Build()
 // sql: "CREATE TABLE `users` (`id` INT AUTO_INCREMENT NOT NULL, `name` VARCHAR(255) NOT NULL, `email` VARCHAR(255), PRIMARY KEY (`id`), CONSTRAINT idx_email UNIQUE (`email`))"
+
+// Create table with composite primary key (multiple columns)
+createTableWithCompositePK := ddl.CreateTable("user_roles").
+    AddColumn(ddl.Column("user_id").Type("INT").NotNull().PrimaryKey()).
+    AddColumn(ddl.Column("role_id").Type("INT").NotNull().PrimaryKey())
+sql, _, err := createTableWithCompositePK.Build()
+// sql: "CREATE TABLE `user_roles` (`user_id` INT NOT NULL, `role_id` INT NOT NULL, PRIMARY KEY (`user_id`, `role_id`))"
+
+// Alternative: specify primary key separately (legacy method)
+createTableLegacy := ddl.CreateTable("users").
+    AddColumn(ddl.Column("id").Type("INT").AutoIncrement().NotNull()).
+    AddColumn(ddl.Column("name").Type("VARCHAR").Size(255).NotNull()).
+    PrimaryKey("id")
+sql, _, err := createTableLegacy.Build()
+// sql: "CREATE TABLE `users` (`id` INT AUTO_INCREMENT NOT NULL, `name` VARCHAR(255) NOT NULL, PRIMARY KEY (`id`))"
 
 // Alter table
 alterTable := ddl.AlterTable("users").

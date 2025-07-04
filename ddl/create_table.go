@@ -85,72 +85,6 @@ func (b *CreateTableBuilder) AddColumnWithType(name, typ string) *CreateTableBui
 	return b
 }
 
-// Convenience methods for common column types
-func (b *CreateTableBuilder) Int(name string) *CreateTableBuilder {
-	return b.AddColumnWithType(name, "INT")
-}
-
-func (b *CreateTableBuilder) BigInt(name string) *CreateTableBuilder {
-	return b.AddColumnWithType(name, "BIGINT")
-}
-
-func (b *CreateTableBuilder) Varchar(name string, size int) *CreateTableBuilder {
-	if b.err != nil {
-		return b
-	}
-	if size <= 0 {
-		b.err = errors.New("varchar size must be positive")
-		return b
-	}
-
-	col := ColumnDef{
-		Name: name,
-		Type: "VARCHAR",
-		Size: &size,
-	}
-	b.columns = append(b.columns, col)
-	return b
-}
-
-func (b *CreateTableBuilder) Text(name string) *CreateTableBuilder {
-	return b.AddColumnWithType(name, "TEXT")
-}
-
-func (b *CreateTableBuilder) Boolean(name string) *CreateTableBuilder {
-	return b.AddColumnWithType(name, "BOOLEAN")
-}
-
-func (b *CreateTableBuilder) Timestamp(name string) *CreateTableBuilder {
-	return b.AddColumnWithType(name, "TIMESTAMP")
-}
-
-func (b *CreateTableBuilder) DateTime(name string) *CreateTableBuilder {
-	return b.AddColumnWithType(name, "DATETIME")
-}
-
-func (b *CreateTableBuilder) Decimal(name string, precision, scale int) *CreateTableBuilder {
-	if b.err != nil {
-		return b
-	}
-	if precision <= 0 {
-		b.err = errors.New("precision must be positive")
-		return b
-	}
-	if scale < 0 || scale > precision {
-		b.err = errors.New("scale must be between 0 and precision")
-		return b
-	}
-
-	col := ColumnDef{
-		Name:      name,
-		Type:      "DECIMAL",
-		Precision: &precision,
-		Scale:     &scale,
-	}
-	b.columns = append(b.columns, col)
-	return b
-}
-
 // Type sets the column type.
 func (cb *ColumnBuilder) Type(typ string) *ColumnBuilder {
 	if cb.err != nil {
@@ -230,6 +164,15 @@ func (cb *ColumnBuilder) AutoIncrement() *ColumnBuilder {
 		return cb
 	}
 	cb.def.AutoIncrement = true
+	return cb
+}
+
+// PrimaryKey marks this column as a primary key.
+func (cb *ColumnBuilder) PrimaryKey() *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.def.IsPrimaryKey = true
 	return cb
 }
 
@@ -554,11 +497,32 @@ func (b *CreateTableBuilder) Build() (string, []interface{}, error) {
 		columnSQLs = append(columnSQLs, colSQL)
 	}
 
+	// Handle columns marked as primary keys
+	var primaryKeyColumns []string
+	for _, col := range b.columns {
+		if col.IsPrimaryKey {
+			primaryKeyColumns = append(primaryKeyColumns, col.Name)
+		}
+	}
+
 	// Constraints
 	for _, constraint := range b.constraints {
 		constraintSQL, err := constraint.buildSQL(dialect)
 		if err != nil {
 			return "", nil, fmt.Errorf("constraint: %w", err)
+		}
+		columnSQLs = append(columnSQLs, constraintSQL)
+	}
+
+	// Add primary key constraint for columns marked as primary keys
+	if len(primaryKeyColumns) > 0 {
+		primaryKeyConstraint := Constraint{
+			Type:    PrimaryKeyType,
+			Columns: primaryKeyColumns,
+		}
+		constraintSQL, err := primaryKeyConstraint.buildSQL(dialect)
+		if err != nil {
+			return "", nil, fmt.Errorf("primary key constraint: %w", err)
 		}
 		columnSQLs = append(columnSQLs, constraintSQL)
 	}

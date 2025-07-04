@@ -84,6 +84,44 @@ func TestCreateTableBuilder(t *testing.T) {
 		}
 	})
 
+	t.Run("create table with column primary key", func(t *testing.T) {
+		q := ddl.CreateTable("users").
+			AddColumn(ddl.Column("id").Type("INT").NotNull().PrimaryKey()).
+			AddColumn(ddl.Column("name").Type("VARCHAR").Size(255))
+
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "CREATE TABLE users (id INT NOT NULL, name VARCHAR(255), PRIMARY KEY (id))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with multiple column primary keys", func(t *testing.T) {
+		q := ddl.CreateTable("user_roles").
+			AddColumn(ddl.Column("user_id").Type("INT").NotNull().PrimaryKey()).
+			AddColumn(ddl.Column("role_id").Type("INT").NotNull().PrimaryKey())
+
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "CREATE TABLE user_roles (user_id INT NOT NULL, role_id INT NOT NULL, PRIMARY KEY (user_id, role_id))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
 	t.Run("create table with unique constraint", func(t *testing.T) {
 		q := ddl.CreateTable("users").
 			AddColumn(ddl.Column("id").Type("INT").NotNull()).
