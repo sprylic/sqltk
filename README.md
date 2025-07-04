@@ -15,7 +15,7 @@ A SQL toolkit for Go that provides composable query building and DDL operations.
 - If you use Postgres or another database, **set the dialect explicitly**:
   ```go
   sqltk.SetDialect(sqltk.Postgres()) // for Postgres
-sqltk.SetDialect(sqltk.Standard()) // for no quoting (legacy/ANSI)
+sqltk.SetDialect(sqltk.NoQuoteIdent()) // for no identifier quoting (clean SQL)
 
 q := sqltk.Select("id", "name").From("users").Where(sqltk.NewStringCondition("active = ?", true)) // set dialect per builder.
 sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
@@ -29,7 +29,7 @@ Set the dialect globally for your application:
 ```go
 import "github.com/sprylic/sqltk"
 
-sqltk.SetDialect(sqltk.Postgres()) // or sqltk.MySQL(), sqltk.Standard()
+sqltk.SetDialect(sqltk.Postgres()) // or sqltk.MySQL(), sqltk.NoQuoteIdent()
 ```
 
 ## Example Usage
@@ -288,6 +288,12 @@ sql, _, err := dropView.Build()
 
 ## SQL Dialect Examples
 
+The library supports three SQL dialects:
+
+- **MySQL** (default): Uses `?` placeholders and backticks for identifiers
+- **PostgreSQL**: Uses `$1`, `$2`, etc. placeholders and double quotes for identifiers  
+- **NoQuoteIdent**: Uses `?` placeholders and **no identifier quoting** (clean SQL)
+
 #### MySQL (default)
 ```go
 // No need to set dialect for MySQL, it's the default
@@ -302,6 +308,14 @@ sqltk.SetDialect(sqltk.Postgres())
 q := sqltk.Select("id", "name").From("users").Where(sqltk.NewStringCondition("id = ? AND name = ?", 1, "bob"))
 sql, args, err := q.Build()
 // sql: "SELECT \"id\", \"name\" FROM \"users\" WHERE id = $1 AND name = $2"
+```
+
+#### NoQuoteIdent (Clean SQL)
+```go
+sqltk.SetDialect(sqltk.NoQuoteIdent())
+q := sqltk.Select("id", "name").From("users").Where(sqltk.NewStringCondition("id = ? AND name = ?", 1, "bob"))
+sql, args, err := q.Build()
+// sql: "SELECT id, name FROM users WHERE id = ? AND name = ?"
 ```
 
 ## Status

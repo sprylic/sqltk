@@ -9,7 +9,7 @@ import (
 func TestAlterTableBuilder(t *testing.T) {
 	t.Run("add column", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").AddColumn(ddl.Column("age").Type("INT")).
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD COLUMN age INT"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -21,7 +21,7 @@ func TestAlterTableBuilder(t *testing.T) {
 
 	t.Run("drop column", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").DropColumn("old_field").
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users DROP COLUMN old_field"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -33,7 +33,7 @@ func TestAlterTableBuilder(t *testing.T) {
 
 	t.Run("rename column", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").RenameColumn("username", "user_name").
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users RENAME COLUMN username TO user_name"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -45,7 +45,7 @@ func TestAlterTableBuilder(t *testing.T) {
 
 	t.Run("rename table", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").RenameTable("accounts").
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users RENAME TO accounts"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -58,7 +58,7 @@ func TestAlterTableBuilder(t *testing.T) {
 	t.Run("modify column", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
 			ModifyColumn(ddl.Column("age").Type("BIGINT").NotNull()).
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users MODIFY COLUMN age BIGINT NOT NULL"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -76,7 +76,7 @@ func TestAlterTableBuilder(t *testing.T) {
 		}
 		sql, _, err := ddl.AlterTable("users").
 			AddConstraint(constraint).
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD CONSTRAINT idx_email UNIQUE (email)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -89,7 +89,7 @@ func TestAlterTableBuilder(t *testing.T) {
 	t.Run("drop constraint", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
 			DropConstraint("idx_email").
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users DROP CONSTRAINT idx_email"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -102,7 +102,7 @@ func TestAlterTableBuilder(t *testing.T) {
 	t.Run("add index", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
 			AddIndex("idx_name", "name").
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD INDEX idx_name (name)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -115,7 +115,7 @@ func TestAlterTableBuilder(t *testing.T) {
 	t.Run("add multi-column index", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
 			AddIndex("idx_name_email", "name", "email").
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD INDEX idx_name_email (name, email)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -128,7 +128,7 @@ func TestAlterTableBuilder(t *testing.T) {
 	t.Run("drop index", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
 			DropIndex("idx_name").
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users DROP INDEX idx_name"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -150,7 +150,7 @@ func TestAlterTableBuilder(t *testing.T) {
 			DropColumn("old_field").
 			AddConstraint(constraint).
 			AddIndex("idx_age", "age").
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD COLUMN age INT, MODIFY COLUMN name VARCHAR(100) NOT NULL, DROP COLUMN old_field, ADD CONSTRAINT chk_age CHECK (age >= 0), ADD INDEX idx_age (age)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

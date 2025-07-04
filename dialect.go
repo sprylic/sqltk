@@ -12,7 +12,7 @@ type (
 
 // Re-export shared functions for backward compatibility
 var (
-	Standard       = shared.Standard
+	NoQuoteIdent   = shared.NoQuoteIdent
 	MySQL          = shared.MySQL
 	Postgres       = shared.Postgres
 	SetDialect     = shared.SetDialect

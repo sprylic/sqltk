@@ -10,7 +10,7 @@ import (
 
 func main() {
 	// Set dialect (optional, MySQL is default)
-	sqltk.SetDialect(sqltk.Standard())
+	sqltk.SetDialect(sqltk.NoQuoteIdent())
 
 	fmt.Println("=== TRUNCATE TABLE Examples ===")
 	fmt.Println()

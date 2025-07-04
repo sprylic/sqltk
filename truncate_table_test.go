@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	SetDialect(Standard())
+	SetDialect(NoQuoteIdent())
 }
 
 func TestTruncateTableBuilder(t *testing.T) {

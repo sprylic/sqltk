@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	SetDialect(Standard())
+	SetDialect(NoQuoteIdent())
 }
 
 func TestDeleteBuilder(t *testing.T) {

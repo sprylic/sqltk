@@ -9,7 +9,7 @@ import (
 func TestCreateIndexBuilder(t *testing.T) {
 	t.Run("basic index", func(t *testing.T) {
 		sql, _, err := ddl.CreateIndex("idx_users_email", "users").
-			Columns("email").WithDialect(Standard()).Build()
+			Columns("email").WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "CREATE INDEX idx_users_email ON users (email)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -21,7 +21,7 @@ func TestCreateIndexBuilder(t *testing.T) {
 
 	t.Run("unique index", func(t *testing.T) {
 		sql, _, err := ddl.CreateIndex("idx_users_email_unique", "users").
-			Unique().Columns("email").WithDialect(Standard()).Build()
+			Unique().Columns("email").WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "CREATE UNIQUE INDEX idx_users_email_unique ON users (email)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -33,7 +33,7 @@ func TestCreateIndexBuilder(t *testing.T) {
 
 	t.Run("multi-column index", func(t *testing.T) {
 		sql, _, err := ddl.CreateIndex("idx_users_name_email", "users").
-			Columns("name", "email").WithDialect(Standard()).Build()
+			Columns("name", "email").WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "CREATE INDEX idx_users_name_email ON users (name, email)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -45,7 +45,7 @@ func TestCreateIndexBuilder(t *testing.T) {
 
 	t.Run("if not exists", func(t *testing.T) {
 		sql, _, err := ddl.CreateIndex("idx_users_email", "users").IfNotExists().
-			Columns("email").WithDialect(Standard()).Build()
+			Columns("email").WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "CREATE INDEX IF NOT EXISTS idx_users_email ON users (email)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -57,7 +57,7 @@ func TestCreateIndexBuilder(t *testing.T) {
 
 	t.Run("unique if not exists", func(t *testing.T) {
 		sql, _, err := ddl.CreateIndex("idx_users_email_unique", "users").Unique().
-			IfNotExists().Columns("email").WithDialect(Standard()).Build()
+			IfNotExists().Columns("email").WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users (email)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -71,7 +71,7 @@ func TestCreateIndexBuilder(t *testing.T) {
 func TestCreateIndexBuilder_Errors(t *testing.T) {
 	t.Run("empty index name", func(t *testing.T) {
 		_, _, err := ddl.CreateIndex("", "users").Columns("email").
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for empty index name, got none")
 		}
@@ -79,7 +79,7 @@ func TestCreateIndexBuilder_Errors(t *testing.T) {
 
 	t.Run("no table name", func(t *testing.T) {
 		_, _, err := ddl.CreateIndex("idx_test", "").Columns("email").
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for no table name, got none")
 		}
@@ -87,7 +87,7 @@ func TestCreateIndexBuilder_Errors(t *testing.T) {
 
 	t.Run("no columns", func(t *testing.T) {
 		_, _, err := ddl.CreateIndex("idx_test", "users").Columns().
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for no columns, got none")
 		}
@@ -95,7 +95,7 @@ func TestCreateIndexBuilder_Errors(t *testing.T) {
 
 	t.Run("empty table name", func(t *testing.T) {
 		_, _, err := ddl.CreateIndex("idx_test", "").Columns("email").
-			WithDialect(Standard()).Build()
+			WithDialect(NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for empty table name, got none")
 		}
@@ -133,9 +133,9 @@ func TestCreateIndexBuilder_Dialect(t *testing.T) {
 		}
 	})
 
-	t.Run("Standard dialect", func(t *testing.T) {
+	t.Run("NoQuoteIdent dialect", func(t *testing.T) {
 		sql, args, err := ddl.CreateIndex("idx_users_email", "users").
-			Columns("email").WithDialect(Standard()).Build()
+			Columns("email").WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "CREATE INDEX idx_users_email ON users (email)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

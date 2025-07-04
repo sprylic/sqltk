@@ -136,7 +136,7 @@ func TestCreateSchemaPostgres(t *testing.T) {
 	}
 }
 
-func TestCreateSchemaStandard(t *testing.T) {
+func TestCreateSchemaNoQuoteIdent(t *testing.T) {
 	tests := []struct {
 		name     string
 		builder  *ddl.CreateSchemaBuilder
@@ -162,7 +162,7 @@ func TestCreateSchemaStandard(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.Standard())
+			tt.builder.WithDialect(shared.NoQuoteIdent())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {

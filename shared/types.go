@@ -15,7 +15,7 @@ type Dialect interface {
 	QuoteString(s string) string
 }
 
-// standardDialect uses ? for all placeholders and no identifier quoting.
+// standardDialect uses ? for all placeholders and no identifier quoting (NoQuotes dialect).
 type standardDialect struct{}
 
 func (standardDialect) Placeholder(n int) string       { return "?" }
@@ -49,8 +49,8 @@ var (
 	globalDialect Dialect = &mySQLDialectInstance
 )
 
-// Standard returns the standard SQL dialect (no quoting, not the default).
-func Standard() Dialect { return &standardDialectInstance }
+// NoQuoteIdent returns a SQL dialect with no identifier quoting (clean SQL).
+func NoQuoteIdent() Dialect { return &standardDialectInstance }
 
 // MySQL returns the MySQL SQL dialect (default).
 func MySQL() Dialect { return &mySQLDialectInstance }

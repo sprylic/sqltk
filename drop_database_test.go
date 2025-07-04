@@ -116,7 +116,7 @@ func TestDropDatabasePostgres(t *testing.T) {
 	}
 }
 
-func TestDropDatabaseStandard(t *testing.T) {
+func TestDropDatabaseNoQuoteIdent(t *testing.T) {
 	tests := []struct {
 		name     string
 		builder  *ddl.DropDatabaseBuilder
@@ -137,7 +137,7 @@ func TestDropDatabaseStandard(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.Standard())
+			tt.builder.WithDialect(shared.NoQuoteIdent())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {

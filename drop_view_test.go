@@ -10,7 +10,7 @@ func TestDropViewBuilder(t *testing.T) {
 	t.Run("basic drop view", func(t *testing.T) {
 		q := ddl.DropView("active_users")
 
-		sql, args, err := q.WithDialect(Standard()).Build()
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW active_users"
 
 		if err != nil {
@@ -28,7 +28,7 @@ func TestDropViewBuilder(t *testing.T) {
 		q := ddl.DropView("user_stats").
 			IfExists()
 
-		sql, args, err := q.WithDialect(Standard()).Build()
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW IF EXISTS user_stats"
 
 		if err != nil {
@@ -46,7 +46,7 @@ func TestDropViewBuilder(t *testing.T) {
 		q := ddl.DropView("complex_view").
 			Cascade()
 
-		sql, args, err := q.WithDialect(Standard()).Build()
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW complex_view CASCADE"
 
 		if err != nil {
@@ -64,7 +64,7 @@ func TestDropViewBuilder(t *testing.T) {
 		q := ddl.DropView("important_view").
 			Restrict()
 
-		sql, args, err := q.WithDialect(Standard()).Build()
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW important_view RESTRICT"
 
 		if err != nil {
@@ -83,7 +83,7 @@ func TestDropViewBuilder(t *testing.T) {
 			IfExists().
 			Cascade()
 
-		sql, args, err := q.WithDialect(Standard()).Build()
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW IF EXISTS temp_view CASCADE"
 
 		if err != nil {
@@ -102,7 +102,7 @@ func TestDropViewBuilder(t *testing.T) {
 			IfExists().
 			Restrict()
 
-		sql, args, err := q.WithDialect(Standard()).Build()
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW IF EXISTS protected_view RESTRICT"
 
 		if err != nil {
@@ -120,7 +120,7 @@ func TestDropViewBuilder(t *testing.T) {
 func TestDropViewBuilder_Errors(t *testing.T) {
 	t.Run("empty view name", func(t *testing.T) {
 		q := ddl.DropView("")
-		_, _, err := q.WithDialect(Standard()).Build()
+		_, _, err := q.WithDialect(NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for empty view name, got none")
 		}
@@ -130,7 +130,7 @@ func TestDropViewBuilder_Errors(t *testing.T) {
 		q := ddl.DropView("test_view").
 			Cascade().
 			Restrict()
-		_, _, err := q.WithDialect(Standard()).Build()
+		_, _, err := q.WithDialect(NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for using both CASCADE and RESTRICT, got none")
 		}
@@ -140,7 +140,7 @@ func TestDropViewBuilder_Errors(t *testing.T) {
 		q := ddl.DropView("test_view").
 			Restrict().
 			Cascade()
-		_, _, err := q.WithDialect(Standard()).Build()
+		_, _, err := q.WithDialect(NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for using both RESTRICT and CASCADE, got none")
 		}
