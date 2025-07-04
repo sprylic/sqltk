@@ -243,6 +243,21 @@ sql, _, err := alterTable.Build()
 dropTable := ddl.DropTable("users").IfExists()
 sql, _, err := dropTable.Build()
 // sql: "DROP TABLE IF EXISTS `users`"
+
+// Truncate table
+truncateTable := ddl.TruncateTable("users")
+sql, _, err := truncateTable.Build()
+// sql: "TRUNCATE TABLE `users`"
+
+// Truncate table with cascade (PostgreSQL)
+truncateTableCascade := ddl.TruncateTable("users").Cascade().WithDialect(ddl.Postgres())
+sql, _, err := truncateTableCascade.Build()
+// sql: "TRUNCATE TABLE \"users\" CASCADE"
+
+// Truncate table with restart identity (PostgreSQL)
+truncateTableRestart := ddl.TruncateTable("users").Restart().WithDialect(ddl.Postgres())
+sql, _, err := truncateTableRestart.Build()
+// sql: "TRUNCATE TABLE \"users\" RESTART IDENTITY"
 ```
 
 ### Index Operations

@@ -75,6 +75,11 @@ func GetDialect() Dialect {
 // Raw represents raw SQL that should be included directly without quoting.
 type Raw string
 
+// BuildCondition implements the Condition interface.
+func (r Raw) BuildCondition() (string, []interface{}, error) {
+	return string(r), nil, nil
+}
+
 // PGJSON wraps a value for JSON encoding in Postgres queries.
 type PGJSON struct {
 	V interface{}

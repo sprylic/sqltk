@@ -424,7 +424,7 @@ func TestSelectBuilder_Distinct_Subquery(t *testing.T) {
 	})
 
 	t.Run("subquery as column", func(t *testing.T) {
-		sub := Select("COUNT(*)").From("posts").Where(NewStringCondition("posts.user_id = users.id"))
+		sub := Select("COUNT(*)").From("posts").Where(Raw("posts.user_id = users.id"))
 		q := Select("id", sub).From("users")
 		sql, args, err := q.WithDialect(Standard()).Build()
 		wantSQL := "SELECT id, (SELECT COUNT(*) FROM posts WHERE posts.user_id = users.id) FROM users"

@@ -13,9 +13,6 @@ type Condition interface {
 	BuildCondition() (string, []interface{}, error)
 }
 
-// ICondition is an alias for Condition for better readability in method signatures.
-type ICondition = Condition
-
 // StringCondition wraps a string condition for type safety.
 type StringCondition struct {
 	SQL  string
