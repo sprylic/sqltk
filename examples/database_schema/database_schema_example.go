@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/sprylic/sqltk"
 	"log"
 
+	"github.com/sprylic/sqltk"
 	"github.com/sprylic/sqltk/ddl"
 )
 
