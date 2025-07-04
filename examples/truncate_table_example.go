@@ -12,7 +12,8 @@ func main() {
 	// Set dialect (optional, MySQL is default)
 	stk.SetDialect(stk.Standard())
 
-	fmt.Println("=== TRUNCATE TABLE Examples ===\n")
+	fmt.Println("=== TRUNCATE TABLE Examples ===")
+	fmt.Println()
 
 	// Basic truncate table
 	truncateBasic := ddl.TruncateTable("users")
@@ -51,7 +52,8 @@ func main() {
 	fmt.Printf("Args: %v\n\n", args)
 
 	// PostgreSQL-specific examples
-	fmt.Println("=== PostgreSQL Examples ===\n")
+	fmt.Println("=== PostgreSQL Examples ===")
+	fmt.Println()
 
 	// Truncate with restart identity (PostgreSQL)
 	truncateRestart := ddl.TruncateTable("users").Restart().WithDialect(stk.Postgres())
@@ -84,7 +86,8 @@ func main() {
 	fmt.Printf("Args: %v\n\n", args)
 
 	// MySQL example with dialect quoting
-	fmt.Println("=== MySQL Examples ===\n")
+	fmt.Println("=== MySQL Examples ===")
+	fmt.Println()
 
 	truncateMySQL := ddl.TruncateTable("users").WithDialect(stk.MySQL())
 	sql, args, err = truncateMySQL.Build()
@@ -95,7 +98,8 @@ func main() {
 	fmt.Printf("Args: %v\n\n", args)
 
 	// Error handling example
-	fmt.Println("=== Error Handling ===\n")
+	fmt.Println("=== Error Handling ===")
+	fmt.Println()
 
 	// This will cause an error
 	truncateError := ddl.TruncateTable()
