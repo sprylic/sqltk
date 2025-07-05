@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/sprylic/sqltk/sqlfunc"
 )
 
 // SelectBuilder builds SQL SELECT queries.
@@ -69,17 +71,22 @@ func (b *SelectBuilder) WhereNotEqual(column string, value interface{}) *SelectB
 }
 
 // GroupBy adds a GROUP BY clause. Accepts either a column string or Raw.
-func (b *SelectBuilder) GroupBy(expr interface{}) *SelectBuilder {
+func (b *SelectBuilder) GroupBy(expr ...interface{}) *SelectBuilder {
 	if b.whereClause.err != nil || b.tableClauseInterface.err != nil {
 		return b
 	}
-	switch c := expr.(type) {
-	case Raw:
-		b.groupByRaw = append(b.groupByRaw, string(c))
-	case string:
-		b.groupBy = append(b.groupBy, c)
-	default:
-		b.whereClause.err = errors.New("GroupBy: expr must be string or sq.Raw")
+
+	for _, e := range expr {
+		switch c := e.(type) {
+		case sqlfunc.SqlFunc:
+			b.groupByRaw = append(b.groupByRaw, string(c))
+		case Raw:
+			b.groupByRaw = append(b.groupByRaw, string(c))
+		case string:
+			b.groupBy = append(b.groupBy, c)
+		default:
+			b.whereClause.err = errors.New("GroupBy: expr must be string or sq.Raw")
+		}
 	}
 	return b
 }
@@ -108,6 +115,8 @@ func (b *SelectBuilder) OrderBy(expr interface{}) *SelectBuilder {
 		return b
 	}
 	switch c := expr.(type) {
+	case sqlfunc.SqlFunc:
+		b.orderByRaw = append(b.orderByRaw, string(c))
 	case Raw:
 		b.orderByRaw = append(b.orderByRaw, string(c))
 	case string:
@@ -338,6 +347,8 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 				}
 			case Raw:
 				sb.WriteString(string(c))
+			case sqlfunc.SqlFunc:
+				sb.WriteString(string(c))
 			case *SelectBuilder:
 				subSQL, subArgs, subErr := c.Build()
 				if subErr != nil {
@@ -378,8 +389,12 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 					sb.WriteString(string(expr))
 					sb.WriteString(" AS ")
 					sb.WriteString(c.Alias)
+				case sqlfunc.SqlFunc:
+					sb.WriteString(string(expr))
+					sb.WriteString(" AS ")
+					sb.WriteString(c.Alias)
 				default:
-					err = errors.New("Alias: expr must be string, sq.Raw, or *SelectBuilder")
+					err = errors.New("Alias: expr must be string, sq.Raw, *SelectBuilder, or sqlfunc.SqlFunc")
 				}
 			default:
 				err = errors.New("Select: column must be string, sq.Raw, *SelectBuilder, or sq.AliasExpr")
@@ -390,6 +405,8 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 	switch t := b.tableClauseInterface.table.(type) {
 	case string:
 		sb.WriteString(dialect.QuoteIdent(t))
+	case sqlfunc.SqlFunc:
+		sb.WriteString(string(t))
 	case Raw:
 		sb.WriteString(string(t))
 	case *SelectBuilder:
@@ -444,37 +461,20 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 	if len(b.groupBy) > 0 {
 		for _, g := range b.groupBy {
 			if strings.Contains(g, ".") {
+				// Handle table-qualified column names (e.g., "table.column")
 				parts := strings.Split(g, ".")
+				var quoted string
 				for i, part := range parts {
 					if i > 0 {
-						groupBys = append(groupBys, ".")
+						quoted += "."
 					}
-					groupBys = append(groupBys, dialect.QuoteIdent(strings.TrimSpace(part)))
+					quoted += dialect.QuoteIdent(strings.TrimSpace(part))
 				}
-				groupBys = append(groupBys, "") // To join with dot
+				groupBys = append(groupBys, quoted)
 			} else {
 				groupBys = append(groupBys, dialect.QuoteIdent(g))
 			}
 		}
-		// Remove empty strings and join with dot for qualified names
-		var cleaned []string
-		var current string
-		for _, gb := range groupBys {
-			if gb == "." {
-				current += "."
-			} else if gb == "" {
-				if current != "" {
-					cleaned = append(cleaned, current)
-					current = ""
-				}
-			} else {
-				current += gb
-			}
-		}
-		if current != "" {
-			cleaned = append(cleaned, current)
-		}
-		groupBys = cleaned
 	}
 	if len(b.groupByRaw) > 0 {
 		groupBys = append(groupBys, b.groupByRaw...)

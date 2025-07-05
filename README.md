@@ -334,3 +334,227 @@ sql, args, err := q.Build()
 
 ## Status
 Work in progress. 
+
+# CQB - SQL Query Builder
+
+A type-safe SQL query builder for Go that supports multiple dialects and provides a fluent API.
+
+## Features
+
+- **Type-safe**: Compile-time checking of query structure
+- **Multi-dialect support**: MySQL, PostgreSQL, SQLite, and more
+- **Fluent API**: Chainable methods for building queries
+- **Raw SQL support**: Use raw SQL when needed
+- **Function helpers**: Built-in support for database-specific functions
+- **Subquery support**: Nested queries and complex joins
+- **Conditional queries**: Dynamic WHERE clauses
+
+## Quick Start
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/sprylic/sqltk"
+)
+
+func main() {
+    // Set dialect (optional, defaults to MySQL)
+    sqltk.SetDialect(sqltk.NoQuoteIdent())
+    
+    // Build a simple query
+    q := sqltk.Select("id", "name").
+        From("users").
+        Where(sqltk.NewStringCondition("active = ?", true)).
+        OrderBy("name")
+    
+    sql, args, err := q.Build()
+    if err != nil {
+        panic(err)
+    }
+    
+    fmt.Println(sql) // SELECT id, name FROM users WHERE active = ? ORDER BY name
+    fmt.Println(args) // [true]
+}
+```
+
+## Database Function Helpers
+
+CQB provides helper functions for common database operations, making it easier to write database-specific SQL without using raw strings.
+
+### MySQL Functions
+
+```go
+import "github.com/sprylic/sqltk/mysqlfunc"
+
+// Date/Time functions
+q := sqltk.Select(mysqlfunc.CurrentTimestamp()).From("users")
+// SELECT CURRENT_TIMESTAMP FROM users
+
+// String functions
+q := sqltk.Select(
+    sqltk.Alias(mysqlfunc.Concat("first_name", "' '", "last_name"), "full_name"),
+).From("users")
+// SELECT CONCAT(first_name, ' ', last_name) AS full_name FROM users
+
+// Aggregate functions
+q := sqltk.Select(
+    sqltk.Alias(mysqlfunc.Count("*"), "total_users"),
+    sqltk.Alias(mysqlfunc.Avg("age"), "avg_age"),
+).From("users")
+// SELECT COUNT(*) AS total_users, AVG(age) AS avg_age FROM users
+
+// Conditional functions
+q := sqltk.Select(
+    sqltk.Alias(mysqlfunc.If("active", "'Active'", "'Inactive'"), "status"),
+).From("users")
+// SELECT IF(active, 'Active', 'Inactive') AS status FROM users
+```
+
+### PostgreSQL Functions
+
+```go
+import "github.com/sprylic/sqltk/pgfunc"
+
+// Date/Time functions
+q := sqltk.Select(pgfunc.Now()).From("users")
+// SELECT now() FROM users
+
+// String functions
+q := sqltk.Select(
+    sqltk.Alias(pgfunc.Concat("first_name", "' '", "last_name"), "full_name"),
+).From("users")
+// SELECT concat(first_name, ' ', last_name) AS full_name FROM users
+
+// Aggregate functions
+q := sqltk.Select(
+    sqltk.Alias(pgfunc.Count("*"), "total_users"),
+    sqltk.Alias(pgfunc.Avg("age"), "avg_age"),
+).From("users")
+// SELECT count(*) AS total_users, avg(age) AS avg_age FROM users
+
+// Array functions
+q := sqltk.Select(
+    sqltk.Alias(pgfunc.ArrayAgg("tag"), "all_tags"),
+).From("posts").GroupBy("category")
+// SELECT array_agg(tag) AS all_tags FROM posts GROUP BY category
+```
+
+### Using Functions in WHERE Clauses
+
+```go
+// MySQL
+q := sqltk.Select("id", "name").From("users").Where(
+    sqltk.AsCondition(sqltk.Raw("created_at > " + string(mysqlfunc.CurrentTimestamp()))),
+)
+// SELECT id, name FROM users WHERE created_at > CURRENT_TIMESTAMP
+
+// PostgreSQL
+q := sqltk.Select("id", "name").From("users").Where(
+    sqltk.AsCondition(sqltk.Raw("created_at > " + string(pgfunc.Now()))),
+)
+// SELECT id, name FROM users WHERE created_at > now()
+```
+
+### Using Functions in ORDER BY
+
+```go
+// MySQL
+q := sqltk.Select("id", "name").From("users").OrderBy(mysqlfunc.Random())
+// SELECT id, name FROM users ORDER BY RAND()
+
+// PostgreSQL
+q := sqltk.Select("id", "name").From("users").OrderBy(pgfunc.Random())
+// SELECT id, name FROM users ORDER BY random()
+```
+
+## Available Functions
+
+### MySQL Functions (`mysqlfunc`)
+
+**Date/Time Functions:**
+- `CurrentTimestamp()`, `CurrentDate()`, `CurrentTime()`, `Now()`, `UnixTimestamp()`
+- `DateFormat(expr, format)`, `DateAdd(date, interval)`, `DateSub(date, interval)`
+- `Year(date)`, `Month(date)`, `Day(date)`, `Hour(time)`, `Minute(time)`, `Second(time)`
+
+**String Functions:**
+- `Concat(args...)`, `ConcatWs(separator, args...)`
+- `Upper(str)`, `Lower(str)`, `Length(str)`, `Substring(str, pos, len)`
+- `Trim(str)`, `Ltrim(str)`, `Rtrim(str)`, `Replace(str, from, to)`
+
+**Numeric Functions:**
+- `Abs(num)`, `Ceiling(num)`, `Floor(num)`, `Round(num, decimals)`
+- `Mod(dividend, divisor)`, `Power(base, exponent)`, `Sqrt(num)`
+- `Random()`, `Pi()`, `E()`
+
+**Aggregate Functions:**
+- `Count(expr)`, `Sum(expr)`, `Avg(expr)`, `Min(expr)`, `Max(expr)`
+- `GroupConcat(expr, separator)`
+
+**Conditional Functions:**
+- `If(condition, trueVal, falseVal)`, `IfNull(expr, nullVal)`, `NullIf(expr1, expr2)`
+
+**Type Conversion:**
+- `Cast(expr, asType)`, `Convert(expr, asType)`
+
+**JSON Functions:**
+- `JsonExtract(jsonDoc, path)`, `JsonUnquote(jsonVal)`, `JsonLength(jsonDoc, path)`
+
+### PostgreSQL Functions (`pgfunc`)
+
+**Date/Time Functions:**
+- `Now()`, `CurrentTimestamp()`, `CurrentDate()`, `CurrentTime()`
+- `ClockTimestamp()`, `StatementTimestamp()`, `TransactionTimestamp()`
+- `Extract(field, source)`, `DatePart(field, source)`
+- `DateTrunc(field, source)`, `Age(timestamp)`, `Now()`
+
+**String Functions:**
+- `Concat(args...)`, `ConcatWs(separator, args...)`
+- `Upper(str)`, `Lower(str)`, `Length(str)`, `Substr(str, from, count)`
+- `Trim(str)`, `Ltrim(str)`, `Rtrim(str)`, `Replace(str, from, to)`
+
+**Numeric Functions:**
+- `Abs(num)`, `Ceiling(num)`, `Floor(num)`, `Round(num, decimals)`
+- `Trunc(num, decimals)`, `Mod(dividend, divisor)`, `Power(base, exponent)`
+- `Sqrt(num)`, `Random()`, `Pi()`, `E()`
+
+**Aggregate Functions:**
+- `Count(expr)`, `Sum(expr)`, `Avg(expr)`, `Min(expr)`, `Max(expr)`
+- `StringAgg(expr, delimiter)`, `ArrayAgg(expr)`, `JsonAgg(expr)`, `JsonbAgg(expr)`
+
+**Conditional Functions:**
+- `Coalesce(args...)`, `NullIf(expr1, expr2)`, `Greatest(args...)`, `Least(args...)`
+
+**Type Conversion:**
+- `Cast(expr, asType)`, `Convert(expr, asType)`
+
+**JSON Functions:**
+- `JsonExtract(jsonDoc, path)`, `JsonUnquote(jsonVal)`, `JsonLength(jsonDoc, path)`
+
+## Benefits of Using Function Helpers
+
+1. **Type Safety**: Functions are checked at compile time
+2. **Database-Specific**: Each function generates the correct SQL for its target database
+3. **No Raw SQL**: Avoid string concatenation and potential SQL injection
+4. **IDE Support**: Get autocomplete and documentation in your IDE
+5. **Consistency**: Standardized function names and parameters across your codebase
+
+## Examples
+
+See the `examples/` directory for more detailed examples:
+
+- `examples/function_helpers/` - Demonstrates MySQL and PostgreSQL function usage
+- `examples/database_schema/` - Shows how to build DDL statements
+- `examples/type_safe_conditions/` - Type-safe condition building
+- `examples/truncate_table/` - Table truncation examples
+
+## Installation
+
+```bash
+go get github.com/sprylic/sqltk
+```
+
+## License
+
+MIT License - see LICENSE file for details. 
