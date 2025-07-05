@@ -227,19 +227,6 @@ func (cb *ColumnBuilder) Comment(comment string) *ColumnBuilder {
 	return cb
 }
 
-// ForeignKey starts building a foreign key constraint for this column.
-func (cb *ColumnBuilder) ForeignKey() *ForeignKeyBuilder {
-	if cb.err != nil {
-		return &ForeignKeyBuilder{err: cb.err}
-	}
-	return &ForeignKeyBuilder{
-		constraint: Constraint{
-			Type:    ForeignKeyType,
-			Columns: []string{cb.def.Name},
-		},
-	}
-}
-
 // OnUpdate sets the ON UPDATE action for the column default value (e.g., ON UPDATE CURRENT_TIMESTAMP).
 func (cb *ColumnBuilder) OnUpdate(action string) *ColumnBuilder {
 	if cb.err != nil {

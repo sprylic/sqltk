@@ -267,26 +267,6 @@ func TestCreateTableBuilder(t *testing.T) {
 		}
 	})
 
-	t.Run("create table with column-level foreign key", func(t *testing.T) {
-		q := ddl.CreateTable("orders").
-			AddColumn(ddl.Column("id").Type("INT").NotNull().PrimaryKey()).
-			AddColumn(ddl.Column("user_id").Type("INT")).
-			AddForeignKey(ddl.Column("user_id").ForeignKey().References("users", "id").OnDelete("CASCADE").OnUpdate("RESTRICT"))
-
-		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "CREATE TABLE orders (id INT NOT NULL, user_id INT, FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE RESTRICT, PRIMARY KEY (id))"
-
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if sql != wantSQL {
-			t.Errorf("got SQL %q, want %q", sql, wantSQL)
-		}
-		if len(args) != 0 {
-			t.Errorf("got args %v, want none", args)
-		}
-	})
-
 	t.Run("create table with table-level foreign key", func(t *testing.T) {
 		q := ddl.CreateTable("orders").
 			AddColumn(ddl.Column("id").Type("INT").NotNull().PrimaryKey()).
