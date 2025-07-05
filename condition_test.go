@@ -312,7 +312,8 @@ func TestConditionBuilder_Exists(t *testing.T) {
 	})
 
 	t.Run("not exists subquery", func(t *testing.T) {
-		subq := Select("1").From("deleted_users").Where(NewStringCondition("deleted_users.id = users.id"))
+		subq := Select("1").From("deleted_users").
+			Where(NewCond().Raw("deleted_users.id = users.id"))
 		cond := NewCond().NotExists(subq)
 		sql, args, err := cond.Build()
 		wantSQL := "NOT EXISTS (SELECT 1 FROM deleted_users WHERE deleted_users.id = users.id)"

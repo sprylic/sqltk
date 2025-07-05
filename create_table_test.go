@@ -530,11 +530,13 @@ func TestCreateTableBuilder_Dialect(t *testing.T) {
 		defer SetDialect(NoQuoteIdent())
 
 		q := ddl.CreateTable("users").
-			AddColumn(ddl.Column("id").Type("INT").NotNull()).
-			AddColumn(ddl.Column("name").Type("VARCHAR").Size(255))
+			AddColumns(
+				ddl.Column("id").Type("int unsigned").NotNull(),
+				ddl.Column("name").Type("VARCHAR").Size(255),
+			)
 
 		sql, args, err := q.Build()
-		wantSQL := "CREATE TABLE `users` (`id` INT NOT NULL, `name` VARCHAR(255))"
+		wantSQL := "CREATE TABLE `users` (`id` INT UNSIGNED NOT NULL, `name` VARCHAR(255))"
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

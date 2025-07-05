@@ -1,0 +1,362 @@
+# Testing Guidelines
+
+This codebase follows comprehensive testing patterns. All builders and functionality should have thorough test coverage.
+
+## Test File Structure
+
+### 1. Test Function Naming
+```go
+func TestBuilderName_MethodName(t *testing.T) {
+    // Test specific method behavior
+}
+
+func TestBuilderName_ErrorHandling(t *testing.T) {
+    // Test error cases
+}
+
+func TestBuilderName_Integration(t *testing.T) {
+    // Test integration with other components
+}
+```
+
+### 2. Test Organization
+```go
+func TestSelectBuilder(t *testing.T) {
+    t.Run("valid inputs", func(t *testing.T) {
+        // Test valid scenarios
+    })
+    
+    t.Run("invalid inputs", func(t *testing.T) {
+        // Test error cases
+    })
+    
+    t.Run("dialect specific", func(t *testing.T) {
+        // Test dialect-specific behavior
+    })
+}
+```
+
+## Testing Patterns
+
+### 1. Builder Method Testing
+```go
+func TestBuilder_SomeMethod(t *testing.T) {
+    t.Run("valid input", func(t *testing.T) {
+        b := NewBuilder("test")
+        result := b.SomeMethod("valid")
+        
+        if result != b {
+            t.Error("should return same builder instance")
+        }
+        if b.err != nil {
+            t.Errorf("should not have error: %v", b.err)
+        }
+    })
+    
+    t.Run("invalid input", func(t *testing.T) {
+        b := NewBuilder("test")
+        result := b.SomeMethod("")
+        
+        if result != b {
+            t.Error("should return same builder instance")
+        }
+        if b.err == nil {
+            t.Error("should have error for empty input")
+        }
+    })
+    
+    t.Run("error propagation", func(t *testing.T) {
+        b := NewBuilder("") // Invalid - empty name
+        result := b.SomeMethod("valid")
+        
+        if result != b {
+            t.Error("should return same builder instance")
+        }
+        if b.err == nil {
+            t.Error("should propagate constructor error")
+        }
+    })
+}
+```
+
+### 2. SQL Output Testing
+```go
+func TestBuilder_Build(t *testing.T) {
+    tests := []struct {
+        name     string
+        builder  *Builder
+        wantSQL  string
+        wantArgs []interface{}
+        wantErr  bool
+    }{
+        {
+            name: "simple case",
+            builder: NewBuilder("users").SomeMethod("value"),
+            wantSQL: "SELECT * FROM users WHERE column = ?",
+            wantArgs: []interface{}{"value"},
+            wantErr: false,
+        },
+        {
+            name: "error case",
+            builder: NewBuilder(""),
+            wantSQL: "",
+            wantArgs: nil,
+            wantErr: true,
+        },
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            sql, args, err := tt.builder.Build()
+            
+            if (err != nil) != tt.wantErr {
+                t.Errorf("Build() error = %v, wantErr %v", err, tt.wantErr)
+                return
+            }
+            
+            if sql != tt.wantSQL {
+                t.Errorf("Build() sql = %v, want %v", sql, tt.wantSQL)
+            }
+            
+            if !reflect.DeepEqual(args, tt.wantArgs) {
+                t.Errorf("Build() args = %v, want %v", args, tt.wantArgs)
+            }
+        })
+    }
+}
+```
+
+### 3. Dialect Testing
+```go
+func TestBuilder_Dialect(t *testing.T) {
+    tests := []struct {
+        name     string
+        dialect  shared.Dialect
+        wantSQL  string
+    }{
+        {
+            name: "MySQL",
+            dialect: MySQL(),
+            wantSQL: "SELECT `id` FROM `users`",
+        },
+        {
+            name: "PostgreSQL", 
+            dialect: Postgres(),
+            wantSQL: "SELECT \"id\" FROM \"users\"",
+        },
+        {
+            name: "NoQuoteIdent",
+            dialect: NoQuoteIdent(),
+            wantSQL: "SELECT id FROM users",
+        },
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            b := NewBuilder("users").WithDialect(tt.dialect)
+            sql, _, err := b.Build()
+            
+            if err != nil {
+                t.Fatalf("unexpected error: %v", err)
+            }
+            
+            if sql != tt.wantSQL {
+                t.Errorf("got SQL %q, want %q", sql, tt.wantSQL)
+            }
+        })
+    }
+}
+```
+
+## Examples from Codebase
+
+### Select Builder Tests
+```go
+// [select_test.go](mdc:select_test.go)
+func TestSelectBuilder(t *testing.T) {
+    t.Run("basic select", func(t *testing.T) {
+        q := Select("id", "name").From("users")
+        sql, args, err := q.Build()
+        
+        if err != nil {
+            t.Fatalf("unexpected error: %v", err)
+        }
+        
+        wantSQL := "SELECT `id`, `name` FROM `users`"
+        if sql != wantSQL {
+            t.Errorf("got SQL %q, want %q", sql, wantSQL)
+        }
+        
+        if len(args) != 0 {
+            t.Errorf("expected no args, got %v", args)
+        }
+    })
+}
+```
+
+### Condition Builder Tests
+```go
+// [condition_test.go](mdc:condition_test.go)
+func TestConditionBuilder(t *testing.T) {
+    t.Run("equal condition", func(t *testing.T) {
+        cond := NewCond().Equal("active", true)
+        sql, args, err := cond.BuildCondition()
+        
+        if err != nil {
+            t.Fatalf("unexpected error: %v", err)
+        }
+        
+        wantSQL := "active = ?"
+        if sql != wantSQL {
+            t.Errorf("got SQL %q, want %q", sql, wantSQL)
+        }
+        
+        wantArgs := []interface{}{true}
+        if !reflect.DeepEqual(args, wantArgs) {
+            t.Errorf("got args %v, want %v", args, wantArgs)
+        }
+    })
+}
+```
+
+### Constraint Builder Tests
+```go
+// [constraint_builder_test.go](mdc:constraint_builder_test.go)
+func TestConstraintBuilder(t *testing.T) {
+    t.Run("primary key", func(t *testing.T) {
+        constraint := ddl.NewConstraint().PrimaryKey("id").Build()
+        
+        if constraint.Type != ddl.PrimaryKeyType {
+            t.Errorf("expected PrimaryKeyType, got %s", constraint.Type)
+        }
+        
+        if len(constraint.Columns) != 1 || constraint.Columns[0] != "id" {
+            t.Errorf("expected columns [id], got %v", constraint.Columns)
+        }
+    })
+}
+```
+
+## Integration Testing
+
+### Database Integration Tests
+```go
+// [mysql_integration_test.go](mdc:mysql_integration_test.go)
+func TestMySQLIntegration(t *testing.T) {
+    db := setupTestDB(t)
+    defer db.Close()
+    
+    // Test actual database operations
+    q := Select("id").From("users").Where(NewStringCondition("active = ?", true))
+    sql, args, err := q.Build()
+    
+    if err != nil {
+        t.Fatalf("unexpected error: %v", err)
+    }
+    
+    // Execute query against real database
+    rows, err := db.Query(sql, args...)
+    if err != nil {
+        t.Fatalf("query failed: %v", err)
+    }
+    defer rows.Close()
+}
+```
+
+## Test Utilities
+
+### Helper Functions
+```go
+func setupTestDB(t *testing.T) *sql.DB {
+    // Setup test database connection
+}
+
+func assertSQL(t *testing.T, got, want string) {
+    t.Helper()
+    if got != want {
+        t.Errorf("got SQL %q, want %q", got, want)
+    }
+}
+
+func assertArgs(t *testing.T, got, want []interface{}) {
+    t.Helper()
+    if !reflect.DeepEqual(got, want) {
+        t.Errorf("got args %v, want %v", got, want)
+    }
+}
+```
+
+## Best Practices
+
+### 1. Test Both Success and Failure Cases
+```go
+// Test valid inputs
+func TestBuilder_ValidInput(t *testing.T) {
+    // Test successful scenarios
+}
+
+// Test invalid inputs  
+func TestBuilder_InvalidInput(t *testing.T) {
+    // Test error cases
+}
+```
+
+### 2. Test Error Propagation
+```go
+func TestBuilder_ErrorPropagation(t *testing.T) {
+    b := NewBuilder("") // Invalid
+    b.SomeMethod("valid") // Should not clear error
+    
+    if b.err == nil {
+        t.Error("should preserve constructor error")
+    }
+}
+```
+
+### 3. Test Dialect-Specific Behavior
+```go
+func TestBuilder_DialectSpecific(t *testing.T) {
+    // Test each supported dialect
+    dialects := []shared.Dialect{MySQL(), Postgres(), NoQuoteIdent()}
+    
+    for _, dialect := range dialects {
+        t.Run(dialect.Name(), func(t *testing.T) {
+            // Test dialect-specific behavior
+        })
+    }
+}
+```
+
+### 4. Use Table-Driven Tests
+```go
+func TestBuilder_TableDriven(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    string
+        wantSQL  string
+        wantErr  bool
+    }{
+        // Define test cases
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // Run test case
+        })
+    }
+}
+```
+
+### 5. Test Edge Cases
+```go
+func TestBuilder_EdgeCases(t *testing.T) {
+    // Test empty inputs
+    // Test very long inputs  
+    // Test special characters
+    // Test nil inputs
+}
+```
+description:
+globs:
+alwaysApply: false
+---

@@ -1,0 +1,241 @@
+# Builder Pattern Guidelines
+
+This codebase uses a consistent fluent builder pattern. Follow these guidelines when implementing or modifying builders.
+
+## Builder Structure
+
+### 1. Builder Struct
+```go
+type Builder struct {
+    // Core data
+    tableName string
+    columns   []string
+    
+    // Error handling
+    err error
+    
+    // Optional configuration
+    dialect shared.Dialect
+}
+```
+
+### 2. Constructor Pattern
+```go
+func NewBuilder(name string) *Builder {
+    if name == "" {
+        return &Builder{err: errors.New("name is required")}
+    }
+    return &Builder{
+        tableName: name,
+        // Initialize slices/maps
+    }
+}
+```
+
+### 3. Method Pattern
+All builder methods should follow this pattern:
+```go
+func (b *Builder) SomeMethod(param string) *Builder {
+    // 1. Early error check
+    if b.err != nil {
+        return b
+    }
+    
+    // 2. Input validation
+    if param == "" {
+        b.err = errors.New("param is required")
+        return b
+    }
+    
+    // 3. Business logic
+    b.someField = param
+    
+    // 4. Return self for chaining
+    return b
+}
+```
+
+## Key Principles
+
+### 1. Error Handling
+- Store errors in the builder's `err` field
+- Check `err != nil` at the start of every method
+- Return early if error exists
+- Don't overwrite existing errors
+
+### 2. Fluent Chaining
+- All methods return `*Builder` (or the specific builder type)
+- Methods should be chainable
+- Return `b` (the builder instance) at the end of each method
+
+### 3. Validation
+- Validate inputs early in each method
+- Set descriptive error messages
+- Don't panic on invalid input
+
+### 4. Build Method
+```go
+func (b *Builder) Build() (string, []interface{}, error) {
+    if b.err != nil {
+        return "", nil, b.err
+    }
+    
+    // Build SQL and args
+    sql, args, err := b.buildSQL()
+    if err != nil {
+        return "", nil, err
+    }
+    
+    return sql, args, nil
+}
+```
+
+## Examples from Codebase
+
+### Select Builder
+```go
+// [select.go](mdc:select.go)
+func (b *SelectBuilder) From(table string) *SelectBuilder {
+    if b.err != nil {
+        return b
+    }
+    if table == "" {
+        b.err = errors.New("table name is required")
+        return b
+    }
+    b.table = table
+    return b
+}
+```
+
+### Alter Table Builder
+```go
+// [ddl/alter_table.go](mdc:ddl/alter_table.go)
+func (b *AlterTableBuilder) AddColumn(cb *ColumnBuilder) *AlterTableBuilder {
+    if b.err != nil {
+        return b
+    }
+    col, err := cb.BuildDef()
+    if err != nil {
+        b.err = err
+        return b
+    }
+    // Add operation to builder
+    return b
+}
+```
+
+### Constraint Builder
+```go
+// [constraint_builder_test.go](mdc:constraint_builder_test.go)
+func (b *ConstraintBuilder) PrimaryKey(columns ...string) *ConstraintBuilder {
+    if b.err != nil {
+        return b
+    }
+    if len(columns) == 0 {
+        b.err = errors.New("at least one column is required for primary key")
+        return b
+    }
+    b.constraint.Type = PrimaryKeyType
+    b.constraint.Columns = columns
+    return b
+}
+```
+
+## Common Patterns
+
+### 1. Optional Configuration
+```go
+func (b *Builder) WithDialect(d shared.Dialect) *Builder {
+    if b.err != nil {
+        return b
+    }
+    b.dialect = d
+    return b
+}
+```
+
+### 2. Variadic Parameters
+```go
+func (b *Builder) AddColumns(columns ...string) *Builder {
+    if b.err != nil {
+        return b
+    }
+    if len(columns) == 0 {
+        b.err = errors.New("at least one column is required")
+        return b
+    }
+    b.columns = append(b.columns, columns...)
+    return b
+}
+```
+
+### 3. Nested Builders
+```go
+func (b *Builder) AddConstraint(cb *ConstraintBuilder) *Builder {
+    if b.err != nil {
+        return b
+    }
+    if cb == nil {
+        b.err = errors.New("constraint builder is nil")
+        return b
+    }
+    if cb.err != nil {
+        b.err = cb.err
+        return b
+    }
+    // Use the nested builder
+    return b
+}
+```
+
+## Testing Builder Methods
+
+### 1. Test Valid Inputs
+```go
+func TestBuilder_ValidInput(t *testing.T) {
+    b := NewBuilder("test")
+    result := b.SomeMethod("valid")
+    
+    if result != b {
+        t.Error("should return same builder instance")
+    }
+    if b.err != nil {
+        t.Errorf("should not have error: %v", b.err)
+    }
+}
+```
+
+### 2. Test Invalid Inputs
+```go
+func TestBuilder_InvalidInput(t *testing.T) {
+    b := NewBuilder("test")
+    result := b.SomeMethod("")
+    
+    if result != b {
+        t.Error("should return same builder instance")
+    }
+    if b.err == nil {
+        t.Error("should have error for empty input")
+    }
+}
+```
+
+### 3. Test Error Propagation
+```go
+func TestBuilder_ErrorPropagation(t *testing.T) {
+    b := NewBuilder("")
+    result := b.SomeMethod("valid")
+    
+    if result != b {
+        t.Error("should return same builder instance")
+    }
+    if b.err == nil {
+        t.Error("should propagate constructor error")
+    }
+}
+```
+description:
+globs:
+alwaysApply: false
+---

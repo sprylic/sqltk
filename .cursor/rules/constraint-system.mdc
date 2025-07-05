@@ -1,0 +1,234 @@
+# Constraint System Guidelines
+
+The codebase uses a unified `ConstraintBuilder` API for creating SQL constraints. This system provides type-safe, fluent constraint creation that works consistently across CREATE and ALTER TABLE operations.
+
+## ConstraintBuilder API
+
+### Basic Usage
+```go
+import "github.com/sprylic/sqltk/ddl"
+
+// Create a constraint
+constraint := ddl.NewConstraint().PrimaryKey("id").Build()
+
+// Use in CREATE TABLE
+createTable := ddl.CreateTable("users").
+    AddColumn(ddl.Column("id").Type("INT")).
+    AddConstraint(ddl.NewConstraint().PrimaryKey("id"))
+
+// Use in ALTER TABLE
+alterTable := ddl.AlterTable("users").
+    AddConstraint(ddl.NewConstraint().Unique("idx_email", "email"))
+```
+
+### Constraint Types
+
+#### 1. Primary Key
+```go
+// Single column
+constraint := ddl.NewConstraint().PrimaryKey("id").Build()
+
+// Multiple columns (composite key)
+constraint := ddl.NewConstraint().PrimaryKey("user_id", "role_id").Build()
+```
+
+#### 2. Unique Constraint
+```go
+constraint := ddl.NewConstraint().Unique("idx_email", "email").Build()
+constraint := ddl.NewConstraint().Unique("idx_name_email", "name", "email").Build()
+```
+
+#### 3. Check Constraint
+```go
+constraint := ddl.NewConstraint().Check("chk_age", "age >= 0").Build()
+constraint := ddl.NewConstraint().Check("chk_status", "status IN ('active', 'inactive')").Build()
+```
+
+#### 4. Foreign Key
+```go
+constraint := ddl.NewConstraint().ForeignKey("fk_user_role", "role_id").
+    WithReference("roles", "id").
+    WithOnDelete("CASCADE").
+    WithOnUpdate("CASCADE").
+    Build()
+```
+
+#### 5. Index
+```go
+constraint := ddl.NewConstraint().Index("idx_name_email", "name", "email").Build()
+```
+
+#### 6. Raw Constraint
+```go
+constraint := ddl.NewConstraint().Raw("chk_custom", "custom_expression").Build()
+```
+
+## Fluent API Methods
+
+### WithColumns
+```go
+constraint := ddl.NewConstraint().Unique("idx_test", "col1").
+    WithColumns("col1", "col2").Build()
+```
+
+### WithCheckExpr
+```go
+constraint := ddl.NewConstraint().Check("chk_test", "value > 0").
+    WithCheckExpr("value > 0").Build()
+```
+
+### WithReference
+```go
+constraint := ddl.NewConstraint().ForeignKey("fk_test", "user_id").
+    WithReference("users", "id").Build()
+```
+
+### WithOnDelete/WithOnUpdate
+```go
+constraint := ddl.NewConstraint().ForeignKey("fk_test", "user_id").
+    WithReference("users", "id").
+    WithOnDelete("CASCADE").
+    WithOnUpdate("CASCADE").
+    Build()
+```
+
+## Integration with Builders
+
+### CREATE TABLE
+```go
+// [ddl/create_table.go](mdc:ddl/create_table.go)
+createTable := ddl.CreateTable("users").
+    AddColumn(ddl.Column("id").Type("INT").AutoIncrement().NotNull()).
+    AddColumn(ddl.Column("email").Type("VARCHAR").Size(255)).
+    AddConstraint(ddl.NewConstraint().PrimaryKey("id")).
+    AddConstraint(ddl.NewConstraint().Unique("idx_email", "email"))
+```
+
+### ALTER TABLE
+```go
+// [ddl/alter_table.go](mdc:ddl/alter_table.go)
+alterTable := ddl.AlterTable("users").
+    AddConstraint(ddl.NewConstraint().Check("chk_age", "age >= 0")).
+    AddConstraint(ddl.NewConstraint().Unique("idx_email", "email"))
+
+// Add multiple constraints at once
+alterTable := ddl.AlterTable("users").
+    AddConstraints(
+        ddl.NewConstraint().Check("chk_age", "age >= 0"),
+        ddl.NewConstraint().Unique("idx_email", "email"),
+    )
+
+// Add raw constraint directly
+alterTable := ddl.AlterTable("users").
+    AddRawConstraint("chk_custom", "custom_expression")
+```
+
+## Testing Constraints
+
+### Test Constraint Creation
+```go
+func TestConstraintBuilder(t *testing.T) {
+    constraint := ddl.NewConstraint().PrimaryKey("id").Build()
+    
+    if constraint.Type != ddl.PrimaryKeyType {
+        t.Errorf("expected PrimaryKeyType, got %s", constraint.Type)
+    }
+    if len(constraint.Columns) != 1 || constraint.Columns[0] != "id" {
+        t.Errorf("expected columns [id], got %v", constraint.Columns)
+    }
+}
+```
+
+### Test with Builders
+```go
+func TestConstraintBuilderWithAlterTable(t *testing.T) {
+    sql, _, err := ddl.AlterTable("users").
+        AddConstraint(ddl.NewConstraint().Check("chk_age", "age >= 0")).
+        WithDialect(ddl.NoQuoteIdent()).Build()
+    
+    wantSQL := "ALTER TABLE users ADD CONSTRAINT chk_age CHECK (age >= 0)"
+    if err != nil {
+        t.Fatalf("unexpected error: %v", err)
+    }
+    if sql != wantSQL {
+        t.Errorf("got SQL %q, want %q", sql, wantSQL)
+    }
+}
+```
+
+## Key Files
+
+### Implementation
+- [constraint_builder_test.go](mdc:constraint_builder_test.go) - Comprehensive constraint tests
+- [ddl/alter_table.go](mdc:ddl/alter_table.go) - ALTER TABLE constraint integration
+- [ddl/create_table.go](mdc:ddl/create_table.go) - CREATE TABLE constraint integration
+
+### Examples
+- [examples/constraint_builder/constraint_builder_example.go](mdc:examples/constraint_builder/constraint_builder_example.go) - Usage examples
+
+## Best Practices
+
+### 1. Use ConstraintBuilder for All Constraints
+```go
+// ✅ Good - Use ConstraintBuilder
+ddl.NewConstraint().PrimaryKey("id")
+ddl.NewConstraint().Unique("idx_email", "email")
+
+// ❌ Avoid - Direct constraint creation
+PrimaryKey{Columns: []string{"id"}}
+```
+
+### 2. Chain Methods for Complex Constraints
+```go
+// ✅ Good - Fluent chaining
+constraint := ddl.NewConstraint().ForeignKey("fk_user_role", "role_id").
+    WithReference("roles", "id").
+    WithOnDelete("CASCADE").
+    WithOnUpdate("CASCADE").
+    Build()
+```
+
+### 3. Use AddConstraints for Multiple Constraints
+```go
+// ✅ Good - Multiple constraints at once
+alterTable.AddConstraints(
+    ddl.NewConstraint().Check("chk_age", "age >= 0"),
+    ddl.NewConstraint().Unique("idx_email", "email"),
+)
+
+// ❌ Avoid - Multiple AddConstraint calls
+alterTable.AddConstraint(ddl.NewConstraint().Check("chk_age", "age >= 0"))
+alterTable.AddConstraint(ddl.NewConstraint().Unique("idx_email", "email"))
+```
+
+### 4. Validate Constraint Names
+```go
+// ✅ Good - Descriptive constraint names
+ddl.NewConstraint().Unique("idx_user_email", "email")
+ddl.NewConstraint().Check("chk_user_age", "age >= 0")
+
+// ❌ Avoid - Generic names
+ddl.NewConstraint().Unique("idx", "email")
+ddl.NewConstraint().Check("chk", "age >= 0")
+```
+
+## Error Handling
+
+The ConstraintBuilder follows the same error handling pattern as other builders:
+
+```go
+// Errors are stored in the builder
+constraint := ddl.NewConstraint().PrimaryKey() // Missing columns
+if constraint.err != nil {
+    // Handle error
+}
+
+// Errors propagate to parent builders
+alterTable := ddl.AlterTable("users").
+    AddConstraint(ddl.NewConstraint().PrimaryKey()) // Will have error
+sql, args, err := alterTable.Build() // err will contain the constraint error
+```
+description:
+globs:
+alwaysApply: false
+---

@@ -191,7 +191,8 @@ func testMySQLCRUD(t *testing.T, db *sql.DB) {
 		insertID, _ := result.LastInsertId()
 
 		// Select
-		q2 := Select("id", "name", "email").From("users").Where(NewStringCondition("id = ?", insertID))
+		q2 := Select("id", "name", "email").From("users").
+			Where(NewCond().Where("id", "=", insertID))
 		sqlStr, args, err = q2.WithDialect(MySQL()).Build()
 		if err != nil {
 			t.Fatalf("select build: %v", err)
@@ -207,7 +208,7 @@ func testMySQLCRUD(t *testing.T, db *sql.DB) {
 		}
 
 		// Update
-		q3 := Update("users").Set("age", 26).Where(NewStringCondition("id = ?", insertID))
+		q3 := Update("users").Set("age", 26).Where(NewCond().Equal("id", insertID))
 		sqlStr, args, err = q3.WithDialect(MySQL()).Build()
 		if err != nil {
 			t.Fatalf("update build: %v", err)

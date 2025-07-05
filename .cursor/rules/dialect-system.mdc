@@ -1,0 +1,377 @@
+# Dialect System Guidelines
+
+The codebase supports multiple SQL dialects with consistent APIs. Understanding the dialect system is crucial for building database-agnostic code.
+
+## Supported Dialects
+
+### 1. MySQL (Default)
+- **Placeholders**: `?`
+- **Identifier Quoting**: Backticks (`` `column` ``)
+- **Example**: `SELECT `id` FROM `users` WHERE active = ?`
+
+### 2. PostgreSQL
+- **Placeholders**: `$1`, `$2`, etc.
+- **Identifier Quoting**: Double quotes (`"column"`)
+- **Example**: `SELECT "id" FROM "users" WHERE active = $1`
+
+### 3. NoQuoteIdent (Clean SQL)
+- **Placeholders**: `?`
+- **Identifier Quoting**: None
+- **Example**: `SELECT id FROM users WHERE active = ?`
+
+## Setting Dialects
+
+### Global Dialect Setting
+```go
+import "github.com/sprylic/sqltk"
+
+// Set globally for the application
+sqltk.SetDialect(sqltk.Postgres())
+sqltk.SetDialect(sqltk.MySQL())
+sqltk.SetDialect(sqltk.NoQuoteIdent())
+```
+
+### Per-Builder Dialect Setting
+```go
+// Set dialect on specific builder
+q := sqltk.Select("id").From("users").
+    WithDialect(sqltk.Postgres())
+
+// DDL operations
+createTable := ddl.CreateTable("users").
+    WithDialect(ddl.Postgres())
+```
+
+## Dialect Implementation
+
+### Dialect Interface
+```go
+// [shared/types.go](mdc:shared/types.go)
+type Dialect interface {
+    Name() string
+    QuoteIdentifier(identifier string) string
+    Placeholder(index int) string
+}
+```
+
+### Dialect-Specific Behavior
+```go
+// MySQL dialect
+mysql := MySQL()
+mysql.QuoteIdentifier("users")     // Returns "`users`"
+mysql.Placeholder(1)              // Returns "?"
+
+// PostgreSQL dialect  
+postgres := Postgres()
+postgres.QuoteIdentifier("users")  // Returns "\"users\""
+postgres.Placeholder(1)           // Returns "$1"
+
+// NoQuoteIdent dialect
+clean := NoQuoteIdent()
+clean.QuoteIdentifier("users")     // Returns "users"
+clean.Placeholder(1)              // Returns "?"
+```
+
+## Building SQL with Dialects
+
+### Query Builders
+```go
+// [select.go](mdc:select.go)
+func (b *SelectBuilder) Build() (string, []interface{}, error) {
+    if b.err != nil {
+        return "", nil, b.err
+    }
+    
+    dialect := b.getDialect()
+    sql := b.buildSQL(dialect)
+    args := b.buildArgs()
+    
+    return sql, args, nil
+}
+
+func (b *SelectBuilder) buildSQL(dialect shared.Dialect) string {
+    // Use dialect for identifier quoting
+    table := dialect.QuoteIdentifier(b.table)
+    columns := make([]string, len(b.columns))
+    for i, col := range b.columns {
+        columns[i] = dialect.QuoteIdentifier(col)
+    }
+    
+    return fmt.Sprintf("SELECT %s FROM %s", 
+        strings.Join(columns, ", "), table)
+}
+```
+
+### DDL Operations
+```go
+// [ddl/alter_table.go](mdc:ddl/alter_table.go)
+func (b *AlterTableBuilder) buildOperationSQL(op AlterOperation, dialect shared.Dialect) (string, error) {
+    tableName := dialect.QuoteIdentifier(b.tableName)
+    
+    switch op.Type {
+    case AddColumnType:
+        column := dialect.QuoteIdentifier(op.Column)
+        return fmt.Sprintf("ADD COLUMN %s %s", column, op.NewType), nil
+    case AddConstraintType:
+        constraintName := dialect.QuoteIdentifier(op.ConstraintName)
+        // Build constraint SQL with dialect
+        return fmt.Sprintf("ADD CONSTRAINT %s %s", constraintName, constraintSQL), nil
+    }
+}
+```
+
+## Testing Dialect Behavior
+
+### Dialect-Specific Tests
+```go
+func TestBuilder_Dialect(t *testing.T) {
+    tests := []struct {
+        name     string
+        dialect  shared.Dialect
+        wantSQL  string
+    }{
+        {
+            name: "MySQL",
+            dialect: MySQL(),
+            wantSQL: "SELECT `id` FROM `users`",
+        },
+        {
+            name: "PostgreSQL",
+            dialect: Postgres(),
+            wantSQL: "SELECT \"id\" FROM \"users\"",
+        },
+        {
+            name: "NoQuoteIdent",
+            dialect: NoQuoteIdent(),
+            wantSQL: "SELECT id FROM users",
+        },
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            q := Select("id").From("users").WithDialect(tt.dialect)
+            sql, _, err := q.Build()
+            
+            if err != nil {
+                t.Fatalf("unexpected error: %v", err)
+            }
+            
+            if sql != tt.wantSQL {
+                t.Errorf("got SQL %q, want %q", sql, tt.wantSQL)
+            }
+        })
+    }
+}
+```
+
+### Placeholder Testing
+```go
+func TestBuilder_Placeholders(t *testing.T) {
+    tests := []struct {
+        name     string
+        dialect  shared.Dialect
+        wantSQL  string
+        wantArgs []interface{}
+    }{
+        {
+            name: "MySQL",
+            dialect: MySQL(),
+            wantSQL: "SELECT * FROM users WHERE id = ? AND name = ?",
+            wantArgs: []interface{}{1, "Alice"},
+        },
+        {
+            name: "PostgreSQL",
+            dialect: Postgres(),
+            wantSQL: "SELECT * FROM users WHERE id = $1 AND name = $2",
+            wantArgs: []interface{}{1, "Alice"},
+        },
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            q := Select("*").From("users").
+                Where(NewStringCondition("id = ? AND name = ?", 1, "Alice")).
+                WithDialect(tt.dialect)
+            
+            sql, args, err := q.Build()
+            
+            if err != nil {
+                t.Fatalf("unexpected error: %v", err)
+            }
+            
+            if sql != tt.wantSQL {
+                t.Errorf("got SQL %q, want %q", sql, tt.wantSQL)
+            }
+            
+            if !reflect.DeepEqual(args, tt.wantArgs) {
+                t.Errorf("got args %v, want %v", args, tt.wantArgs)
+            }
+        })
+    }
+}
+```
+
+## Best Practices
+
+### 1. Always Use WithDialect for Per-Builder Dialects
+```go
+// ✅ Good - Explicit dialect setting
+q := Select("id").From("users").WithDialect(Postgres())
+
+// ❌ Avoid - Relying on global dialect
+sqltk.SetDialect(Postgres())
+q := Select("id").From("users") // May cause issues in concurrent code
+```
+
+### 2. Test All Supported Dialects
+```go
+func TestBuilder_AllDialects(t *testing.T) {
+    dialects := []shared.Dialect{MySQL(), Postgres(), NoQuoteIdent()}
+    
+    for _, dialect := range dialects {
+        t.Run(dialect.Name(), func(t *testing.T) {
+            // Test with this dialect
+        })
+    }
+}
+```
+
+### 3. Handle Dialect-Specific Features
+```go
+func (b *Builder) buildSQL(dialect shared.Dialect) string {
+    // Handle dialect-specific SQL features
+    switch dialect.Name() {
+    case "postgres":
+        return b.buildPostgresSQL()
+    case "mysql":
+        return b.buildMySQLSQL()
+    default:
+        return b.buildGenericSQL()
+    }
+}
+```
+
+### 4. Validate Dialect Usage
+```go
+func (b *Builder) WithDialect(d shared.Dialect) *Builder {
+    if b.err != nil {
+        return b
+    }
+    if d == nil {
+        b.err = errors.New("dialect cannot be nil")
+        return b
+    }
+    b.dialect = d
+    return b
+}
+```
+
+## Common Dialect Patterns
+
+### 1. Identifier Quoting
+```go
+func quoteIdentifier(dialect shared.Dialect, identifier string) string {
+    return dialect.QuoteIdentifier(identifier)
+}
+
+// Usage
+tableName := quoteIdentifier(dialect, "users")
+columnName := quoteIdentifier(dialect, "user_id")
+```
+
+### 2. Placeholder Generation
+```go
+func buildPlaceholders(dialect shared.Dialect, count int) []string {
+    placeholders := make([]string, count)
+    for i := 0; i < count; i++ {
+        placeholders[i] = dialect.Placeholder(i + 1)
+    }
+    return placeholders
+}
+
+// Usage
+placeholders := buildPlaceholders(dialect, 3)
+// MySQL: ["?", "?", "?"]
+// PostgreSQL: ["$1", "$2", "$3"]
+```
+
+### 3. Dialect-Aware SQL Building
+```go
+func (b *Builder) buildWhereClause(dialect shared.Dialect, conditions []Condition) string {
+    if len(conditions) == 0 {
+        return ""
+    }
+    
+    sqlParts := make([]string, len(conditions))
+    for i, cond := range conditions {
+        sql, _, _ := cond.BuildCondition()
+        sqlParts[i] = sql
+    }
+    
+    return "WHERE " + strings.Join(sqlParts, " AND ")
+}
+```
+
+## Integration with Database Functions
+
+### MySQL Functions
+```go
+// [mysqlfunc/mysql.go](mdc:mysqlfunc/mysql.go)
+func CurrentTimestamp() Raw {
+    return Raw("CURRENT_TIMESTAMP")
+}
+
+func Concat(args ...interface{}) Raw {
+    // MySQL-specific CONCAT function
+    return Raw("CONCAT(" + buildConcatArgs(args) + ")")
+}
+```
+
+### PostgreSQL Functions
+```go
+// [pgfunc/pgfunc.go](mdc:pgfunc/pgfunc.go)
+func CurrentTimestamp() Raw {
+    return Raw("CURRENT_TIMESTAMP")
+}
+
+func Concat(args ...interface{}) Raw {
+    // PostgreSQL-specific concatenation
+    return Raw(strings.Join(buildConcatArgs(args), " || "))
+}
+```
+
+## Error Handling with Dialects
+
+### Dialect-Specific Errors
+```go
+func (b *Builder) validateForDialect(dialect shared.Dialect) error {
+    switch dialect.Name() {
+    case "postgres":
+        return b.validatePostgres()
+    case "mysql":
+        return b.validateMySQL()
+    default:
+        return b.validateGeneric()
+    }
+}
+```
+
+### Placeholder Validation
+```go
+func validatePlaceholders(sql string, dialect shared.Dialect) error {
+    switch dialect.Name() {
+    case "mysql", "noquoteident":
+        // Validate ? placeholders
+        return validateQuestionMarkPlaceholders(sql)
+    case "postgres":
+        // Validate $1, $2, etc. placeholders
+        return validateDollarPlaceholders(sql)
+    default:
+        return errors.New("unsupported dialect")
+    }
+}
+```
+description:
+globs:
+alwaysApply: false
+---

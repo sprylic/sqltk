@@ -1,0 +1,120 @@
+# Go SQL Tool Kit - SQL Query Builder Project Overview
+
+This is a Go SQL query builder library that provides type-safe, fluent APIs for building SQL queries and DDL operations. The project is currently in active development.
+
+## Key Architecture Principles
+
+### 1. Fluent Builder Pattern
+All builders follow a fluent API pattern where methods return the builder instance for chaining:
+```go
+q := sqltk.Select("id", "name").
+    From("users").
+    Where(sqltk.NewStringCondition("active = ?", true)).
+    OrderBy("name")
+```
+
+### 2. Type Safety
+The library enforces type safety through interfaces like `Condition`:
+```go
+// ✅ Type-safe
+q.Where(sqltk.NewStringCondition("active = ?", true))
+q.Where(sqltk.NewCond().Equal("active", true))
+
+// ❌ Won't compile
+q.Where("active = ?", true)  // string doesn't implement Condition
+```
+
+### 3. Multi-Dialect Support
+- **MySQL** (default): Uses `?` placeholders and backticks for identifiers
+- **PostgreSQL**: Uses `$1`, `$2` placeholders and double quotes
+- **NoQuoteIdent**: Uses `?` placeholders with no identifier quoting
+
+### 4. Error Handling
+Builders store errors internally and return them during `Build()`:
+```go
+q := sqltk.Select("").From("") // Invalid - empty select
+sql, args, err := q.Build()    // err will contain validation error
+```
+
+## Core Components
+
+### Query Builders
+- [select.go](mdc:select.go) - SELECT query builder
+- [insert.go](mdc:insert.go) - INSERT query builder  
+- [update.go](mdc:update.go) - UPDATE query builder
+- [delete.go](mdc:delete.go) - DELETE query builder
+
+### DDL Operations
+- [ddl/](mdc:ddl/) - All DDL operations (CREATE, ALTER, DROP)
+- [ddl/create_table.go](mdc:ddl/create_table.go) - Table creation
+- [ddl/alter_table.go](mdc:ddl/alter_table.go) - Table modifications
+- [ddl/types.go](mdc:ddl/types.go) - Shared DDL types
+
+### Condition System
+- [condition.go](mdc:condition.go) - Condition interface and builders
+- [condition_test.go](mdc:condition_test.go) - Comprehensive condition tests
+
+### Constraint System
+- [constraint_builder_test.go](mdc:constraint_builder_test.go) - Unified constraint builder
+- [examples/constraint_builder/](mdc:examples/constraint_builder/) - Constraint examples
+
+## Development Guidelines
+
+### 1. Builder Pattern Consistency
+All builders should:
+- Return `*Builder` for fluent chaining
+- Store errors in `err` field
+- Check `err != nil` at start of each method
+- Return early if error exists
+
+### 2. Testing Strategy
+- Comprehensive test coverage for all builders
+- Test both valid and invalid inputs
+- Test dialect-specific behavior
+- Integration tests with actual databases
+
+### 3. API Design
+- Prefer fluent APIs over function parameters
+- Use type-safe interfaces over raw strings
+- Provide both high-level and low-level APIs
+- Maintain backward compatibility
+
+### 4. Error Handling
+- Validate inputs early
+- Store errors in builder structs
+- Return descriptive error messages
+- Don't panic on invalid input
+
+## Key Files to Understand
+
+### Core Query Building
+- [select.go](mdc:select.go) - Main SELECT implementation
+- [condition.go](mdc:condition.go) - Condition system
+- [clause.go](mdc:clause.go) - SQL clause handling
+
+### DDL System
+- [ddl/create_table.go](mdc:ddl/create_table.go) - Table creation with constraints
+- [ddl/alter_table.go](mdc:ddl/alter_table.go) - Table modifications
+- [ddl/types.go](mdc:ddl/types.go) - Shared types and interfaces
+
+### Testing
+- [select_test.go](mdc:select_test.go) - SELECT tests
+- [condition_test.go](mdc:condition_test.go) - Condition tests
+- [constraint_builder_test.go](mdc:constraint_builder_test.go) - Constraint tests
+
+## Examples Directory
+- [examples/constraint_builder/](mdc:examples/constraint_builder/) - Constraint building examples
+- [examples/type_safe_conditions/](mdc:examples/type_safe_conditions/) - Condition examples
+- [examples/database_schema/](mdc:examples/database_schema/) - Schema creation examples
+
+## Recent Development Focus
+The project has been focusing on improving constraint creation with a unified `ConstraintBuilder` API that provides:
+- Fluent constraint building
+- Type-safe constraint creation
+- Consistent API across CREATE and ALTER TABLE
+- Support for raw constraints
+- Comprehensive test coverage
+description:
+globs:
+alwaysApply: false
+---
