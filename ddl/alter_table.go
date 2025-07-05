@@ -173,24 +173,8 @@ func (b *AlterTableBuilder) ModifyColumn(cb *ColumnBuilder) *AlterTableBuilder {
 	return b
 }
 
-// AddConstraint adds a constraint to the table.
-func (b *AlterTableBuilder) AddConstraint(constraint Constraint) *AlterTableBuilder {
-	if b.err != nil {
-		return b
-	}
-	b.operations = append(b.operations, AlterOperation{
-		Type:           AddConstraintType,
-		ConstraintName: constraint.Name,
-		Columns:        constraint.Columns,
-		Reference:      constraint.Reference,
-		CheckExpr:      constraint.CheckExpr,
-		ConstraintType: constraint.Type,
-	})
-	return b
-}
-
-// AddConstraintBuilder adds a constraint from a ConstraintBuilder.
-func (b *AlterTableBuilder) AddConstraintBuilder(cb *ConstraintBuilder) *AlterTableBuilder {
+// AddConstraint adds a constraint from a ConstraintBuilder.
+func (b *AlterTableBuilder) AddConstraint(cb *ConstraintBuilder) *AlterTableBuilder {
 	if b.err != nil {
 		return b
 	}
@@ -202,7 +186,51 @@ func (b *AlterTableBuilder) AddConstraintBuilder(cb *ConstraintBuilder) *AlterTa
 		b.err = cb.err
 		return b
 	}
-	return b.AddConstraint(cb.Build())
+	constraint := cb.Build()
+	b.operations = append(b.operations, AlterOperation{
+		Type:           AddConstraintType,
+		ConstraintName: constraint.Name,
+		Columns:        constraint.Columns,
+		Reference:      constraint.Reference,
+		CheckExpr:      constraint.CheckExpr,
+		ConstraintType: constraint.Type,
+	})
+	return b
+}
+
+// AddConstraints add constraints from a number of ConstraintBuilder
+func (b *AlterTableBuilder) AddConstraints(cbs ...*ConstraintBuilder) *AlterTableBuilder {
+	if b.err != nil {
+		return b
+	}
+
+	for _, cb := range cbs {
+		b.AddConstraint(cb)
+	}
+
+	return b
+}
+
+// AddRawConstraint adds a raw constraint with a name and SQL expression.
+func (b *AlterTableBuilder) AddRawConstraint(name, expr string) *AlterTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if name == "" {
+		b.err = errors.New("constraint name is required")
+		return b
+	}
+	if expr == "" {
+		b.err = errors.New("constraint expression is required")
+		return b
+	}
+	b.operations = append(b.operations, AlterOperation{
+		Type:           AddConstraintType,
+		ConstraintName: name,
+		CheckExpr:      expr,
+		ConstraintType: CheckType,
+	})
+	return b
 }
 
 // DropConstraint drops a constraint from the table.

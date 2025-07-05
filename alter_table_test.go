@@ -69,13 +69,8 @@ func TestAlterTableBuilder(t *testing.T) {
 	})
 
 	t.Run("add constraint", func(t *testing.T) {
-		constraint := ddl.Constraint{
-			Type:    ddl.UniqueType,
-			Name:    "idx_email",
-			Columns: []string{"email"},
-		}
 		sql, _, err := ddl.AlterTable("users").
-			AddConstraint(constraint).
+			AddConstraint(ddl.NewConstraint().Unique("idx_email", "email")).
 			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD CONSTRAINT idx_email UNIQUE (email)"
 		if err != nil {
@@ -139,16 +134,11 @@ func TestAlterTableBuilder(t *testing.T) {
 	})
 
 	t.Run("complex alter with all operations", func(t *testing.T) {
-		constraint := ddl.Constraint{
-			Type:      ddl.CheckType,
-			Name:      "chk_age",
-			CheckExpr: "age >= 0",
-		}
 		sql, _, err := ddl.AlterTable("users").
 			AddColumn(ddl.Column("age").Type("INT")).
 			ModifyColumn(ddl.Column("name").Type("VARCHAR").Size(100).NotNull()).
 			DropColumn("old_field").
-			AddConstraint(constraint).
+			AddConstraint(ddl.NewConstraint().Check("chk_age", "age >= 0")).
 			AddIndex("idx_age", "age").
 			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD COLUMN age INT, MODIFY COLUMN name VARCHAR(100) NOT NULL, DROP COLUMN old_field, ADD CONSTRAINT chk_age CHECK (age >= 0), ADD INDEX idx_age (age)"
@@ -223,13 +213,8 @@ func TestAlterTableBuilder(t *testing.T) {
 	})
 
 	t.Run("add constraint (postgres)", func(t *testing.T) {
-		constraint := ddl.Constraint{
-			Type:    ddl.UniqueType,
-			Name:    "idx_email",
-			Columns: []string{"email"},
-		}
 		sql, _, err := ddl.AlterTable("users").
-			AddConstraint(constraint).
+			AddConstraint(ddl.NewConstraint().Unique("idx_email", "email")).
 			WithDialect(Postgres()).Build()
 		wantSQL := "ALTER TABLE \"users\" ADD CONSTRAINT \"idx_email\" UNIQUE (\"email\")"
 		if err != nil {

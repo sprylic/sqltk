@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/sprylic/sqltk/pgfunc"
 	"math/rand"
 	"os"
 	"strings"
@@ -201,12 +202,10 @@ func testPostgresDDL(t *testing.T, db *sql.DB) {
 	// Test ALTER TABLE
 	t.Run("Alter Table", func(t *testing.T) {
 		q := ddl.AlterTable("users").
-			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").Default("NOW()")).
-			AddConstraint(ddl.Constraint{
-				Type:    ddl.UniqueType,
-				Name:    "idx_name_age",
-				Columns: []string{"name", "age"},
-			})
+			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").Default(pgfunc.Now())).
+			AddConstraint(
+				ddl.NewConstraint().Unique("idx_email_age", "email", "age"),
+			)
 		sqlStr, args, err := q.WithDialect(Postgres()).Build()
 		if err != nil {
 			t.Fatalf("alter table build: %v", err)
@@ -271,6 +270,7 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 			t.Fatalf("insert orders: %v", err)
 		}
 
+		// TODO: Update to not use raw subquery or string condition
 		// Complex query with join, subquery, and aggregation
 		// Use raw SQL for subquery to avoid SelectBuilder type issues
 		subq := Raw("(SELECT AVG(amount) FROM orders)")

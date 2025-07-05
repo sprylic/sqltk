@@ -182,7 +182,7 @@ func TestConstraintBuilder(t *testing.T) {
 func TestConstraintBuilderWithAlterTable(t *testing.T) {
 	t.Run("add check constraint with builder", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
-			AddConstraintBuilder(ddl.NewConstraint().Check("chk_age", "age >= 0")).
+			AddConstraint(ddl.NewConstraint().Check("chk_age", "age >= 0")).
 			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD CONSTRAINT chk_age CHECK (age >= 0)"
 		if err != nil {
@@ -195,7 +195,7 @@ func TestConstraintBuilderWithAlterTable(t *testing.T) {
 
 	t.Run("add unique constraint with builder", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
-			AddConstraintBuilder(ddl.NewConstraint().Unique("idx_email", "email")).
+			AddConstraint(ddl.NewConstraint().Unique("idx_email", "email")).
 			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD CONSTRAINT idx_email UNIQUE (email)"
 		if err != nil {
@@ -208,7 +208,7 @@ func TestConstraintBuilderWithAlterTable(t *testing.T) {
 
 	t.Run("add foreign key constraint with builder", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
-			AddConstraintBuilder(ddl.NewConstraint().ForeignKey("fk_user_role", "role_id").
+			AddConstraint(ddl.NewConstraint().ForeignKey("fk_user_role", "role_id").
 				WithReference("roles", "id").
 				WithOnDelete("CASCADE")).
 			WithDialect(NoQuoteIdent()).Build()
@@ -240,7 +240,20 @@ func TestConstraintBuilderWithAlterTable(t *testing.T) {
 
 	t.Run("add raw constraint", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
-			AddConstraintBuilder(ddl.NewConstraint().Raw("chk_custom", "custom_expression")).
+			AddConstraint(ddl.NewConstraint().Raw("chk_custom", "custom_expression")).
+			WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "ALTER TABLE users ADD CONSTRAINT chk_custom CHECK (custom_expression)"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+	})
+
+	t.Run("add raw constraint directly", func(t *testing.T) {
+		sql, _, err := ddl.AlterTable("users").
+			AddRawConstraint("chk_custom", "custom_expression").
 			WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD CONSTRAINT chk_custom CHECK (custom_expression)"
 		if err != nil {

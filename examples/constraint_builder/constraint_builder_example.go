@@ -38,8 +38,8 @@ func main() {
 
 	// Example 2: Alter table to add constraints using the unified constraint builder
 	alterTableSQL, _, err := ddl.AlterTable("users").
-		AddConstraint(ddl.NewConstraint().Check("chk_email_format", "email LIKE '%@%'").Build()).
-		AddConstraint(ddl.NewConstraint().Index("idx_name_email", "name", "email").Build()).
+		AddConstraint(ddl.NewConstraint().Check("chk_email_format", "email LIKE '%@%'")).
+		AddConstraint(ddl.NewConstraint().Index("idx_name_email", "name", "email")).
 		Build()
 
 	if err != nil {
@@ -98,7 +98,7 @@ func main() {
 		WithOnUpdate("CASCADE")
 
 	alterTableWithComplexFK, _, err := ddl.AlterTable("orders").
-		AddConstraintBuilder(constraintBuilder).
+		AddConstraint(constraintBuilder).
 		Build()
 
 	if err != nil {
@@ -107,4 +107,17 @@ func main() {
 
 	fmt.Println("=== Alter Table with Complex Foreign Key ===")
 	fmt.Println(alterTableWithComplexFK)
+	fmt.Println()
+
+	// Example 6: Add raw constraint directly
+	alterTableWithRawConstraint, _, err := ddl.AlterTable("users").
+		AddRawConstraint("chk_complex_logic", "age >= 0 AND age <= 150 AND status IN ('active', 'inactive')").
+		Build()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("=== Alter Table with Raw Constraint ===")
+	fmt.Println(alterTableWithRawConstraint)
 }
