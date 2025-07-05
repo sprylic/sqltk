@@ -4,6 +4,7 @@ package sqltk
 
 import (
 	"database/sql"
+	"github.com/sprylic/sqltk/mysqlfunc"
 	"math/rand"
 	"os"
 	"strings"
@@ -152,13 +153,17 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 
 	// Test ALTER TABLE
 	t.Run("Alter Table", func(t *testing.T) {
-		q := ddl.AlterTable("users"). // TODO: Update
-						AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").Default(Raw("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")).NotNull()).
-						AddConstraint(ddl.Constraint{
-				Type:    ddl.UniqueType,
-				Name:    "idx_name_age",
-				Columns: []string{"name", "age"},
-			})
+		q := ddl.AlterTable("users").
+			AddColumn(
+				ddl.Column("updated_at").
+					Type("TIMESTAMP").
+					Default(mysqlfunc.CurrentTimestamp()).
+					OnUpdate(mysqlfunc.CurrentTimestamp()).
+					NotNull(),
+			).AddConstraint(
+			ddl.NewConstraint().
+				Unique("idx_name_age", "name", "age"),
+		)
 		sqlStr, args, err := q.WithDialect(MySQL()).Build()
 		if err != nil {
 			t.Fatalf("alter table build: %v", err)
@@ -234,6 +239,7 @@ func testMySQLAdvanced(t *testing.T, db *sql.DB) {
 			t.Fatalf("insert test data: %v", err)
 		}
 
+		// TODO: Update to use new methods
 		// Complex query with subquery and aggregation
 		subq := Select(Raw("AVG(age)")).From("users")
 		subSQL, _, _ := subq.WithDialect(MySQL()).Build()
