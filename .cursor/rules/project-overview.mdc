@@ -77,7 +77,8 @@ All builders should:
 - Prefer fluent APIs over function parameters
 - Use type-safe interfaces over raw strings
 - Provide both high-level and low-level APIs
-- Maintain backward compatibility
+- Don't worry about maintaining backward compatibility
+- Don't document added features as new while the library is still in development.
 
 ### 4. Error Handling
 - Validate inputs early
