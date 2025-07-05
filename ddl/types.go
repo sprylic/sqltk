@@ -259,3 +259,155 @@ func buildIndexSQL(dialect shared.Dialect, name string, columns []string) (strin
 	}
 	return "(" + strings.Join(quotedCols, ", ") + ")", nil
 }
+
+// ConstraintBuilder builds constraints with a fluent API.
+type ConstraintBuilder struct {
+	constraint Constraint
+	err        error
+}
+
+// NewConstraint creates a new constraint builder.
+func NewConstraint() *ConstraintBuilder {
+	return &ConstraintBuilder{}
+}
+
+// Check creates a check constraint.
+func (cb *ConstraintBuilder) Check(name, expr string) *ConstraintBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.constraint = Constraint{
+		Type:      CheckType,
+		Name:      name,
+		CheckExpr: expr,
+	}
+	return cb
+}
+
+// Unique creates a unique constraint.
+func (cb *ConstraintBuilder) Unique(name string, columns ...string) *ConstraintBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.constraint = Constraint{
+		Type:    UniqueType,
+		Name:    name,
+		Columns: columns,
+	}
+	return cb
+}
+
+// PrimaryKey creates a primary key constraint.
+func (cb *ConstraintBuilder) PrimaryKey(columns ...string) *ConstraintBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.constraint = Constraint{
+		Type:    PrimaryKeyType,
+		Columns: columns,
+	}
+	return cb
+}
+
+// ForeignKey creates a foreign key constraint.
+func (cb *ConstraintBuilder) ForeignKey(name string, columns ...string) *ConstraintBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.constraint = Constraint{
+		Type:    ForeignKeyType,
+		Name:    name,
+		Columns: columns,
+	}
+	return cb
+}
+
+// Index creates an index constraint.
+func (cb *ConstraintBuilder) Index(name string, columns ...string) *ConstraintBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.constraint = Constraint{
+		Type:    IndexType,
+		Name:    name,
+		Columns: columns,
+	}
+	return cb
+}
+
+// Raw creates a raw constraint from a string (for advanced use cases).
+func (cb *ConstraintBuilder) Raw(name, rawSQL string) *ConstraintBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.constraint = Constraint{
+		Type:      CheckType, // Default to CHECK for raw constraints
+		Name:      name,
+		CheckExpr: rawSQL,
+	}
+	return cb
+}
+
+// WithColumns sets the columns for the constraint.
+func (cb *ConstraintBuilder) WithColumns(columns ...string) *ConstraintBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.constraint.Columns = columns
+	return cb
+}
+
+// WithCheckExpr sets the check expression for the constraint.
+func (cb *ConstraintBuilder) WithCheckExpr(expr string) *ConstraintBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.constraint.CheckExpr = expr
+	return cb
+}
+
+// WithReference sets the foreign key reference for the constraint.
+func (cb *ConstraintBuilder) WithReference(table string, columns ...string) *ConstraintBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.constraint.Reference = &ForeignKeyRef{
+		Table:   table,
+		Columns: columns,
+	}
+	return cb
+}
+
+// WithOnDelete sets the ON DELETE action for the foreign key constraint.
+func (cb *ConstraintBuilder) WithOnDelete(action string) *ConstraintBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	if cb.constraint.Reference == nil {
+		cb.constraint.Reference = &ForeignKeyRef{}
+	}
+	cb.constraint.Reference.OnDelete = action
+	return cb
+}
+
+// WithOnUpdate sets the ON UPDATE action for the foreign key constraint.
+func (cb *ConstraintBuilder) WithOnUpdate(action string) *ConstraintBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	if cb.constraint.Reference == nil {
+		cb.constraint.Reference = &ForeignKeyRef{}
+	}
+	cb.constraint.Reference.OnUpdate = action
+	return cb
+}
+
+// Build returns the built Constraint.
+func (cb *ConstraintBuilder) Build() Constraint {
+	return cb.constraint
+}
+
+// BuildPtr returns a pointer to the built Constraint.
+func (cb *ConstraintBuilder) BuildPtr() *Constraint {
+	return &cb.constraint
+}

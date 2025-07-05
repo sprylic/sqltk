@@ -189,6 +189,22 @@ func (b *AlterTableBuilder) AddConstraint(constraint Constraint) *AlterTableBuil
 	return b
 }
 
+// AddConstraintBuilder adds a constraint from a ConstraintBuilder.
+func (b *AlterTableBuilder) AddConstraintBuilder(cb *ConstraintBuilder) *AlterTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if cb == nil {
+		b.err = errors.New("constraint builder is nil")
+		return b
+	}
+	if cb.err != nil {
+		b.err = cb.err
+		return b
+	}
+	return b.AddConstraint(cb.Build())
+}
+
 // DropConstraint drops a constraint from the table.
 func (b *AlterTableBuilder) DropConstraint(constraintName string) *AlterTableBuilder {
 	if b.err != nil {
@@ -242,6 +258,33 @@ func (b *AlterTableBuilder) DropIndex(indexName string) *AlterTableBuilder {
 	return b
 }
 
+// AddForeignKey adds a foreign key constraint to the table (fluent, like CreateTableBuilder).
+func (b *AlterTableBuilder) AddForeignKey(fkb *ForeignKeyBuilder) *AlterTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	if fkb == nil {
+		b.err = errors.New("foreign key builder is nil")
+		return b
+	}
+	if fkb.err != nil {
+		b.err = fkb.err
+		return b
+	}
+	if fkb.constraint.Reference == nil {
+		b.err = errors.New("foreign key must specify referenced table")
+		return b
+	}
+	b.operations = append(b.operations, AlterOperation{
+		Type:           AddConstraintType,
+		ConstraintName: fkb.constraint.Name,
+		Columns:        fkb.constraint.Columns,
+		Reference:      fkb.constraint.Reference,
+		ConstraintType: fkb.constraint.Type,
+	})
+	return b
+}
+
 // WithDialect sets the dialect for this builder instance.
 func (b *AlterTableBuilder) WithDialect(d shared.Dialect) *AlterTableBuilder {
 	if b.err != nil {
@@ -269,7 +312,7 @@ func (b *AlterTableBuilder) Build() (string, []interface{}, error) {
 	}
 
 	var sb strings.Builder
-	args := []interface{}{}
+	var args []interface{}
 
 	// ALTER TABLE
 	sb.WriteString("ALTER TABLE ")
