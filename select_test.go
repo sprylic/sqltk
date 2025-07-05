@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/sprylic/sqltk/mysqlfunc"
 )
 
 func TestSelectBuilder(t *testing.T) {
@@ -701,6 +703,65 @@ func TestSelectBuilder_FluentJoinTypes(t *testing.T) {
 		}
 		if sql != wantSQL {
 			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+	})
+}
+
+func TestSelectBuilder_GetColumns(t *testing.T) {
+	t.Run("basic string columns", func(t *testing.T) {
+		q := Select("id", "name", "email").From("users")
+		cols := q.GetColumns()
+		wantCols := []string{"id", "name", "email"}
+		if !reflect.DeepEqual(cols, wantCols) {
+			t.Errorf("got columns %v, want %v", cols, wantCols)
+		}
+	})
+
+	t.Run("raw columns", func(t *testing.T) {
+		q := Select("id", Raw("COUNT(*)"), Raw("MAX(created_at)")).From("users")
+		cols := q.GetColumns()
+		wantCols := []string{"id", "COUNT(*)", "MAX(created_at)"}
+		if !reflect.DeepEqual(cols, wantCols) {
+			t.Errorf("got columns %v, want %v", cols, wantCols)
+		}
+	})
+
+	t.Run("sqlfunc columns", func(t *testing.T) {
+		q := Select("id", mysqlfunc.Count("*"), mysqlfunc.Max("created_at")).From("users")
+		cols := q.GetColumns()
+		wantCols := []string{"id", "COUNT(*)", "MAX(created_at)"}
+		if !reflect.DeepEqual(cols, wantCols) {
+			t.Errorf("got columns %v, want %v", cols, wantCols)
+		}
+	})
+
+	t.Run("alias columns", func(t *testing.T) {
+		q := Select("id", Alias("name", "user_name"), Alias(Raw("COUNT(*)"), "total")).From("users")
+		cols := q.GetColumns()
+		wantCols := []string{"id", "user_name", "total"}
+		if !reflect.DeepEqual(cols, wantCols) {
+			t.Errorf("got columns %v, want %v", cols, wantCols)
+		}
+	})
+
+	t.Run("subquery columns", func(t *testing.T) {
+		sub := Select("COUNT(*)").From("orders")
+		q := Select("id", sub).From("users")
+		cols := q.GetColumns()
+		// GetColumns should return the columns from the subquery
+		wantCols := []string{"id", "COUNT(*)"}
+		if !reflect.DeepEqual(cols, wantCols) {
+			t.Errorf("got columns %v, want %v", cols, wantCols)
+		}
+	})
+
+	t.Run("mixed column types", func(t *testing.T) {
+		sub := Select("COUNT(*)").From("orders")
+		q := Select("id", "name", Raw("MAX(created_at)"), mysqlfunc.Sum("amount"), Alias("email", "user_email"), sub).From("users")
+		cols := q.GetColumns()
+		wantCols := []string{"id", "name", "MAX(created_at)", "SUM(amount)", "user_email", "COUNT(*)"}
+		if !reflect.DeepEqual(cols, wantCols) {
+			t.Errorf("got columns %v, want %v", cols, wantCols)
 		}
 	})
 }
