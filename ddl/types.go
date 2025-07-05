@@ -19,6 +19,7 @@ type ColumnDef struct {
 	Default       interface{}
 	AutoIncrement bool
 	IsPrimaryKey  bool
+	IsUnique      bool
 	Collation     string
 	Charset       string
 	Comment       string

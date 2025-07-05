@@ -72,6 +72,21 @@ func (b *CreateTableBuilder) AddColumn(cb *ColumnBuilder) *CreateTableBuilder {
 	return b
 }
 
+// AddColumns adds columns from a ColumnBuilder.
+func (b *CreateTableBuilder) AddColumns(cbs ...*ColumnBuilder) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+	for _, cb := range cbs {
+		col, err := cb.BuildDef()
+		if err != nil {
+			b.err = err
+		}
+		b.columns = append(b.columns, col)
+	}
+	return b
+}
+
 // AddColumnWithType is a convenience method to add a column with just name and type.
 func (b *CreateTableBuilder) AddColumnWithType(name, typ string) *CreateTableBuilder {
 	if b.err != nil {
@@ -176,6 +191,15 @@ func (cb *ColumnBuilder) PrimaryKey() *ColumnBuilder {
 	return cb
 }
 
+// Unique marks this column as unique.
+func (cb *ColumnBuilder) Unique() *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	cb.def.IsUnique = true
+	return cb
+}
+
 // Collation sets the column collation.
 func (cb *ColumnBuilder) Collation(collation string) *ColumnBuilder {
 	if cb.err != nil {
@@ -200,6 +224,30 @@ func (cb *ColumnBuilder) Comment(comment string) *ColumnBuilder {
 		return cb
 	}
 	cb.def.Comment = comment
+	return cb
+}
+
+// ForeignKey starts building a foreign key constraint for this column.
+func (cb *ColumnBuilder) ForeignKey() *ForeignKeyBuilder {
+	if cb.err != nil {
+		return &ForeignKeyBuilder{err: cb.err}
+	}
+	return &ForeignKeyBuilder{
+		constraint: Constraint{
+			Type:    ForeignKeyType,
+			Columns: []string{cb.def.Name},
+		},
+	}
+}
+
+// OnUpdate sets the ON UPDATE action for the column default value (e.g., ON UPDATE CURRENT_TIMESTAMP).
+func (cb *ColumnBuilder) OnUpdate(action string) *ColumnBuilder {
+	if cb.err != nil {
+		return cb
+	}
+	// This would be used for column default value actions, not foreign key actions
+	// For now, we'll store it in a way that can be used in the column definition
+	// TODO: Implement proper column ON UPDATE support
 	return cb
 }
 
@@ -352,27 +400,6 @@ func ForeignKey(name string, columns ...string) *ForeignKeyBuilder {
 	}
 }
 
-// ForeignKey starts building a foreign key constraint.
-func (b *CreateTableBuilder) ForeignKey(name string, columns ...string) *ForeignKeyBuilder {
-	if b.err != nil {
-		return &ForeignKeyBuilder{parent: b, err: b.err}
-	}
-	if name == "" {
-		return &ForeignKeyBuilder{parent: b, err: errors.New("foreign key name is required")}
-	}
-	if len(columns) == 0 {
-		return &ForeignKeyBuilder{parent: b, err: errors.New("foreign key must specify at least one column")}
-	}
-	return &ForeignKeyBuilder{
-		parent: b,
-		constraint: Constraint{
-			Type:    ForeignKeyType,
-			Name:    name,
-			Columns: columns,
-		},
-	}
-}
-
 // References sets the referenced table and columns.
 func (fkb *ForeignKeyBuilder) References(table string, columns ...string) *ForeignKeyBuilder {
 	if fkb.err != nil {
@@ -446,6 +473,19 @@ func (b *CreateTableBuilder) AddForeignKey(fkb *ForeignKeyBuilder) *CreateTableB
 	return b
 }
 
+// AddForeignKeys adds foriegn key constraints to the table
+func (b *CreateTableBuilder) AddForeignKeys(fkbs ...*ForeignKeyBuilder) *CreateTableBuilder {
+	if b.err != nil {
+		return b
+	}
+
+	for _, fkb := range fkbs {
+		b.AddForeignKey(fkb)
+	}
+
+	return b
+}
+
 // WithDialect sets the dialect for this builder instance.
 func (b *CreateTableBuilder) WithDialect(d shared.Dialect) *CreateTableBuilder {
 	if b.err != nil {
@@ -505,6 +545,14 @@ func (b *CreateTableBuilder) Build() (string, []interface{}, error) {
 		}
 	}
 
+	// Handle columns marked as unique
+	var uniqueColumns []string
+	for _, col := range b.columns {
+		if col.IsUnique {
+			uniqueColumns = append(uniqueColumns, col.Name)
+		}
+	}
+
 	// Constraints
 	for _, constraint := range b.constraints {
 		constraintSQL, err := constraint.buildSQL(dialect)
@@ -523,6 +571,19 @@ func (b *CreateTableBuilder) Build() (string, []interface{}, error) {
 		constraintSQL, err := primaryKeyConstraint.buildSQL(dialect)
 		if err != nil {
 			return "", nil, fmt.Errorf("primary key constraint: %w", err)
+		}
+		columnSQLs = append(columnSQLs, constraintSQL)
+	}
+
+	// Add unique constraints for columns marked as unique
+	for _, colName := range uniqueColumns {
+		uniqueConstraint := Constraint{
+			Type:    UniqueType,
+			Columns: []string{colName},
+		}
+		constraintSQL, err := uniqueConstraint.buildSQL(dialect)
+		if err != nil {
+			return "", nil, fmt.Errorf("unique constraint: %w", err)
 		}
 		columnSQLs = append(columnSQLs, constraintSQL)
 	}

@@ -20,9 +20,6 @@ func TestMySQLIntegration(t *testing.T) {
 		dsn = "root:password@tcp(localhost:3306)/"
 	}
 
-	// TODO DO NOT COMMIT
-	dsn = dsn + "?allowNativePasswords=true"
-
 	// Connect to MySQL without specifying a test database
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
@@ -105,7 +102,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 	// Test CREATE TABLE with MySQL-specific features
 	t.Run("Create Table", func(t *testing.T) {
 		q := ddl.CreateTable("users").
-			AddColumn(ddl.Column("id").Type("INT").AutoIncrement().NotNull()).
+			AddColumn(ddl.Column("id").Type("INT").PrimaryKey().AutoIncrement()).
 			AddColumn(ddl.Column("name").Type("VARCHAR").Size(255).NotNull()).
 			AddColumn(ddl.Column("email").Type("VARCHAR").Size(255)).
 			AddColumn(ddl.Column("age").Type("INT")).
@@ -156,9 +153,9 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 
 	// Test ALTER TABLE
 	t.Run("Alter Table", func(t *testing.T) {
-		q := ddl.AlterTable("users").
-			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").Default(Raw("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")).NotNull()).
-			AddConstraint(ddl.Constraint{
+		q := ddl.AlterTable("users"). // TODO: Update
+						AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").Default(Raw("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")).NotNull()).
+						AddConstraint(ddl.Constraint{
 				Type:    ddl.UniqueType,
 				Name:    "idx_name_age",
 				Columns: []string{"name", "age"},

@@ -122,6 +122,45 @@ func TestCreateTableBuilder(t *testing.T) {
 		}
 	})
 
+	t.Run("create table with column unique constraint", func(t *testing.T) {
+		q := ddl.CreateTable("users").
+			AddColumn(ddl.Column("id").Type("INT").AutoIncrement().NotNull().PrimaryKey()).
+			AddColumn(ddl.Column("email").Type("VARCHAR").Size(255).NotNull().Unique())
+
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "CREATE TABLE users (id INT NOT NULL AUTO_INCREMENT, email VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (email))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with multiple unique columns", func(t *testing.T) {
+		q := ddl.CreateTable("users").
+			AddColumn(ddl.Column("id").Type("INT").AutoIncrement().NotNull().PrimaryKey()).
+			AddColumn(ddl.Column("email").Type("VARCHAR").Size(255).NotNull().Unique()).
+			AddColumn(ddl.Column("username").Type("VARCHAR").Size(100).NotNull().Unique())
+
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "CREATE TABLE users (id INT NOT NULL AUTO_INCREMENT, email VARCHAR(255) NOT NULL, username VARCHAR(100) NOT NULL, PRIMARY KEY (id), UNIQUE (email), UNIQUE (username))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
 	t.Run("create table with unique constraint", func(t *testing.T) {
 		q := ddl.CreateTable("users").
 			AddColumn(ddl.Column("id").Type("INT").NotNull()).
@@ -216,6 +255,46 @@ func TestCreateTableBuilder(t *testing.T) {
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'User accounts table' ENGINE InnoDB"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with column-level foreign key", func(t *testing.T) {
+		q := ddl.CreateTable("orders").
+			AddColumn(ddl.Column("id").Type("INT").NotNull().PrimaryKey()).
+			AddColumn(ddl.Column("user_id").Type("INT")).
+			AddForeignKey(ddl.Column("user_id").ForeignKey().References("users", "id").OnDelete("CASCADE").OnUpdate("RESTRICT"))
+
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "CREATE TABLE orders (id INT NOT NULL, user_id INT, FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE RESTRICT, PRIMARY KEY (id))"
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("create table with table-level foreign key", func(t *testing.T) {
+		q := ddl.CreateTable("orders").
+			AddColumn(ddl.Column("id").Type("INT").NotNull().PrimaryKey()).
+			AddColumn(ddl.Column("user_id").Type("INT")).
+			AddForeignKey(ddl.ForeignKey("fk_orders_user", "user_id").References("users", "id").OnDelete("CASCADE").OnUpdate("RESTRICT"))
+
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "CREATE TABLE orders (id INT NOT NULL, user_id INT, CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE RESTRICT, PRIMARY KEY (id))"
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -460,30 +539,6 @@ func TestCreateTableBuilder_Errors(t *testing.T) {
 		_, _, err := q.WithDialect(NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for check constraint without expression, got none")
-		}
-	})
-
-	t.Run("foreign key without name", func(t *testing.T) {
-		q := ddl.CreateTable("orders").
-			AddColumn(ddl.Column("id").Type("INT").NotNull()).
-			ForeignKey("", "user_id").
-			References("users", "id").
-			Build()
-		_, _, err := q.WithDialect(NoQuoteIdent()).Build()
-		if err == nil {
-			t.Errorf("expected error for foreign key without name, got none")
-		}
-	})
-
-	t.Run("foreign key without columns", func(t *testing.T) {
-		q := ddl.CreateTable("orders").
-			AddColumn(ddl.Column("id").Type("INT").NotNull()).
-			ForeignKey("fk_test").
-			References("users", "id").
-			Build()
-		_, _, err := q.WithDialect(NoQuoteIdent()).Build()
-		if err == nil {
-			t.Errorf("expected error for foreign key without columns, got none")
 		}
 	})
 }
