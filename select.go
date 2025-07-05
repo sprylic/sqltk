@@ -583,6 +583,26 @@ func intToString(n int) string {
 	return string(b[bp:])
 }
 
+// GetColumns returns all columns used in the builder and all subquery builders.
+func (b *SelectBuilder) GetColumns() []string {
+	var cols []string
+	for _, col := range b.columns {
+		switch col.(type) {
+		case string:
+			cols = append(cols, col.(string))
+		case Raw:
+			cols = append(cols, string(col.(Raw)))
+		case sqlfunc.SqlFunc:
+			cols = append(cols, string(col.(sqlfunc.SqlFunc)))
+		case *SelectBuilder:
+			cols = append(cols, col.(*SelectBuilder).GetColumns()...)
+		case AliasExpr:
+			cols = append(cols, col.(AliasExpr).Alias)
+		}
+	}
+	return cols
+}
+
 // MustSQL is a helper for internal use to get SQL for subqueries in joins (ignores args and errors).
 func (b *SelectBuilder) MustSQL() string {
 	sql, _, _ := b.Build()
