@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/sprylic/sqltk/ddl"
+	"github.com/sprylic/sqltk/mysqlfunc"
 )
 
 func TestCreateTableBuilder(t *testing.T) {
@@ -719,6 +720,94 @@ func TestCreateTableBuilder_Postgres(t *testing.T) {
 		sql, args, err := q.WithDialect(Postgres()).Build()
 		wantSQL := "CREATE TABLE \"users\" (\"id\" BIGSERIAL NOT NULL)"
 
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+}
+
+func TestCreateTable_OnUpdateOnDeleteWithSqlFunc(t *testing.T) {
+	t.Run("on update and on delete with string actions", func(t *testing.T) {
+		q := ddl.CreateTable("orders").
+			AddColumn(ddl.Column("id").Type("INT").PrimaryKey()).
+			AddColumn(ddl.Column("user_id").Type("INT")).
+			AddForeignKey(
+				ddl.ForeignKey("fk_orders_user", "user_id").
+					References("users", "id").
+					OnDelete("CASCADE").
+					OnUpdate("RESTRICT"),
+			)
+
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "CREATE TABLE orders (id INT, user_id INT, CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE RESTRICT, PRIMARY KEY (id))"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("on update and on delete with other string actions", func(t *testing.T) {
+		q := ddl.CreateTable("orders").
+			AddColumn(ddl.Column("id").Type("INT").PrimaryKey()).
+			AddColumn(ddl.Column("user_id").Type("INT")).
+			AddForeignKey(
+				ddl.ForeignKey("fk_orders_user", "user_id").
+					References("users", "id").
+					OnDelete("SET NULL").
+					OnUpdate("NO ACTION"),
+			)
+
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "CREATE TABLE orders (id INT, user_id INT, CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL ON UPDATE NO ACTION, PRIMARY KEY (id))"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+}
+
+func TestCreateTable_ColumnOnUpdate(t *testing.T) {
+	t.Run("column on update with string", func(t *testing.T) {
+		q := ddl.CreateTable("users").
+			AddColumn(ddl.Column("id").Type("INT").PrimaryKey()).
+			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP"))
+
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "CREATE TABLE users (id INT, updated_at TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id))"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("column on update with sqlfunc", func(t *testing.T) {
+		q := ddl.CreateTable("users").
+			AddColumn(ddl.Column("id").Type("INT").PrimaryKey()).
+			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").OnUpdate(mysqlfunc.CurrentTimestamp()))
+
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "CREATE TABLE users (id INT, updated_at TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id))"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

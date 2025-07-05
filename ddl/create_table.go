@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqlfunc"
 )
 
 // CreateTableBuilder builds SQL CREATE TABLE queries.
@@ -228,13 +229,21 @@ func (cb *ColumnBuilder) Comment(comment string) *ColumnBuilder {
 }
 
 // OnUpdate sets the ON UPDATE action for the column default value (e.g., ON UPDATE CURRENT_TIMESTAMP).
-func (cb *ColumnBuilder) OnUpdate(action string) *ColumnBuilder {
+func (cb *ColumnBuilder) OnUpdate(action interface{}) *ColumnBuilder {
 	if cb.err != nil {
 		return cb
 	}
-	// This would be used for column default value actions, not foreign key actions
-	// For now, we'll store it in a way that can be used in the column definition
-	// TODO: Implement proper column ON UPDATE support
+	var actionStr string
+	switch v := action.(type) {
+	case string:
+		actionStr = v
+	case sqlfunc.SqlFunc:
+		actionStr = string(v)
+	default:
+		cb.err = fmt.Errorf("OnUpdate action must be string or sqlfunc.SqlFunc, got %T", action)
+		return cb
+	}
+	cb.def.OnUpdate = actionStr
 	return cb
 }
 

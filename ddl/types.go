@@ -23,6 +23,7 @@ type ColumnDef struct {
 	Collation     string
 	Charset       string
 	Comment       string
+	OnUpdate      string
 }
 
 // ConstraintType represents the type of constraint.
@@ -133,6 +134,11 @@ func (c *ColumnDef) buildSQL(dialect shared.Dialect) (string, error) {
 	// Comment
 	if c.Comment != "" {
 		parts = append(parts, "COMMENT", dialect.QuoteString(c.Comment))
+	}
+
+	// ON UPDATE (MySQL only, but safe to emit for others if set)
+	if c.OnUpdate != "" {
+		parts = append(parts, "ON UPDATE", c.OnUpdate)
 	}
 
 	return strings.Join(parts, " "), nil
