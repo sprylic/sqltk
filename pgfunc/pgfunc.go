@@ -60,6 +60,9 @@ func AgeWithEnd(timestamp1, timestamp2 interface{}) sqlfunc.SqlFunc {
 func Concat(args ...interface{}) sqlfunc.SqlFunc {
 	var argStrs []string
 	for _, arg := range args {
+		if err := sqlfunc.ValidateSqlFuncInput(arg); err != nil {
+			panic(fmt.Sprintf("Concat: %v", err))
+		}
 		argStrs = append(argStrs, fmt.Sprintf("%v", arg))
 	}
 	return sqlfunc.SqlFunc("concat(" + strings.Join(argStrs, ", ") + ")")
@@ -69,78 +72,159 @@ func ConcatWs(separator string, args ...interface{}) sqlfunc.SqlFunc {
 	var argStrs []string
 	argStrs = append(argStrs, fmt.Sprintf("'%s'", separator))
 	for _, arg := range args {
+		if err := sqlfunc.ValidateSqlFuncInput(arg); err != nil {
+			panic(fmt.Sprintf("ConcatWs: %v", err))
+		}
 		argStrs = append(argStrs, fmt.Sprintf("%v", arg))
 	}
 	return sqlfunc.SqlFunc("concat_ws(" + strings.Join(argStrs, ", ") + ")")
 }
 
 func Substring(str interface{}, from interface{}, forArg ...interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Substring: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(from); err != nil {
+		panic(fmt.Sprintf("Substring: %v", err))
+	}
 	if len(forArg) > 0 {
+		if err := sqlfunc.ValidateSqlFuncInput(forArg[0]); err != nil {
+			panic(fmt.Sprintf("Substring: %v", err))
+		}
 		return sqlfunc.SqlFunc(fmt.Sprintf("substring(%v from %v for %v)", str, from, forArg[0]))
 	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("substring(%v from %v)", str, from))
 }
 
 func Left(str interface{}, n interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Left: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(n); err != nil {
+		panic(fmt.Sprintf("Left: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("left(%v, %v)", str, n))
 }
 
 func Right(str interface{}, n interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Right: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(n); err != nil {
+		panic(fmt.Sprintf("Right: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("right(%v, %v)", str, n))
 }
 
 func Upper(str interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Upper: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("upper(%v)", str))
 }
 
 func Lower(str interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Lower: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("lower(%v)", str))
 }
 
 func Initcap(str interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Initcap: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("initcap(%v)", str))
 }
 
 func Trim(str interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Trim: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("trim(%v)", str))
 }
 
 func Ltrim(str interface{}, chars ...interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Ltrim: %v", err))
+	}
 	if len(chars) > 0 {
+		if err := sqlfunc.ValidateSqlFuncInput(chars[0]); err != nil {
+			panic(fmt.Sprintf("Ltrim: %v", err))
+		}
 		return sqlfunc.SqlFunc(fmt.Sprintf("ltrim(%v, %v)", str, chars[0]))
 	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("ltrim(%v)", str))
 }
 
 func Rtrim(str interface{}, chars ...interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Rtrim: %v", err))
+	}
 	if len(chars) > 0 {
+		if err := sqlfunc.ValidateSqlFuncInput(chars[0]); err != nil {
+			panic(fmt.Sprintf("Rtrim: %v", err))
+		}
 		return sqlfunc.SqlFunc(fmt.Sprintf("rtrim(%v, %v)", str, chars[0]))
 	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("rtrim(%v)", str))
 }
 
 func Replace(str, from, to interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Replace: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(from); err != nil {
+		panic(fmt.Sprintf("Replace: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(to); err != nil {
+		panic(fmt.Sprintf("Replace: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("replace(%v, %v, %v)", str, from, to))
 }
 
 func Reverse(str interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Reverse: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("reverse(%v)", str))
 }
 
 func Length(str interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Length: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("length(%v)", str))
 }
 
 func CharLength(str interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("CharLength: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("char_length(%v)", str))
 }
 
 func Position(substring, string interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(substring); err != nil {
+		panic(fmt.Sprintf("Position: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(string); err != nil {
+		panic(fmt.Sprintf("Position: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("position(%v in %v)", substring, string))
 }
 
 func Substr(str interface{}, from interface{}, count ...interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Substr: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(from); err != nil {
+		panic(fmt.Sprintf("Substr: %v", err))
+	}
 	if len(count) > 0 {
+		if err := sqlfunc.ValidateSqlFuncInput(count[0]); err != nil {
+			panic(fmt.Sprintf("Substr: %v", err))
+		}
 		return sqlfunc.SqlFunc(fmt.Sprintf("substr(%v, %v, %v)", str, from, count[0]))
 	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("substr(%v, %v)", str, from))
@@ -238,18 +322,30 @@ func JsonbAgg(expr interface{}) sqlfunc.SqlFunc {
 func Coalesce(args ...interface{}) sqlfunc.SqlFunc {
 	var argStrs []string
 	for _, arg := range args {
+		if err := sqlfunc.ValidateSqlFuncInput(arg); err != nil {
+			panic(fmt.Sprintf("Coalesce: %v", err))
+		}
 		argStrs = append(argStrs, fmt.Sprintf("%v", arg))
 	}
 	return sqlfunc.SqlFunc("coalesce(" + strings.Join(argStrs, ", ") + ")")
 }
 
 func NullIf(expr1, expr2 interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(expr1); err != nil {
+		panic(fmt.Sprintf("NullIf: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(expr2); err != nil {
+		panic(fmt.Sprintf("NullIf: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("nullif(%v, %v)", expr1, expr2))
 }
 
 func Greatest(args ...interface{}) sqlfunc.SqlFunc {
 	var argStrs []string
 	for _, arg := range args {
+		if err := sqlfunc.ValidateSqlFuncInput(arg); err != nil {
+			panic(fmt.Sprintf("Greatest: %v", err))
+		}
 		argStrs = append(argStrs, fmt.Sprintf("%v", arg))
 	}
 	return sqlfunc.SqlFunc("greatest(" + strings.Join(argStrs, ", ") + ")")
@@ -258,6 +354,9 @@ func Greatest(args ...interface{}) sqlfunc.SqlFunc {
 func Least(args ...interface{}) sqlfunc.SqlFunc {
 	var argStrs []string
 	for _, arg := range args {
+		if err := sqlfunc.ValidateSqlFuncInput(arg); err != nil {
+			panic(fmt.Sprintf("Least: %v", err))
+		}
 		argStrs = append(argStrs, fmt.Sprintf("%v", arg))
 	}
 	return sqlfunc.SqlFunc("least(" + strings.Join(argStrs, ", ") + ")")
@@ -265,55 +364,109 @@ func Least(args ...interface{}) sqlfunc.SqlFunc {
 
 // Type Conversion Functions
 func Cast(expr interface{}, asType string) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(expr); err != nil {
+		panic(fmt.Sprintf("Cast: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("cast(%v as %s)", expr, asType))
 }
 
 func Convert(expr interface{}, asType string) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(expr); err != nil {
+		panic(fmt.Sprintf("Convert: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("convert(%v, %s)", expr, asType))
 }
 
 // JSON Functions
 func JsonExtract(jsonDoc, path interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(jsonDoc); err != nil {
+		panic(fmt.Sprintf("JsonExtract: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(path); err != nil {
+		panic(fmt.Sprintf("JsonExtract: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("json_extract_path_text(%v, %v)", jsonDoc, path))
 }
 
 func JsonExtractPath(jsonDoc, path interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(jsonDoc); err != nil {
+		panic(fmt.Sprintf("JsonExtractPath: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(path); err != nil {
+		panic(fmt.Sprintf("JsonExtractPath: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("json_extract_path(%v, %v)", jsonDoc, path))
 }
 
 func JsonbExtractPath(jsonDoc, path interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(jsonDoc); err != nil {
+		panic(fmt.Sprintf("JsonbExtractPath: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(path); err != nil {
+		panic(fmt.Sprintf("JsonbExtractPath: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("jsonb_extract_path(%v, %v)", jsonDoc, path))
 }
 
 func JsonTypeof(jsonVal interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(jsonVal); err != nil {
+		panic(fmt.Sprintf("JsonTypeof: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("json_typeof(%v)", jsonVal))
 }
 
 func JsonbTypeof(jsonVal interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(jsonVal); err != nil {
+		panic(fmt.Sprintf("JsonbTypeof: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("jsonb_typeof(%v)", jsonVal))
 }
 
 func JsonLength(jsonVal interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(jsonVal); err != nil {
+		panic(fmt.Sprintf("JsonLength: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("json_array_length(%v)", jsonVal))
 }
 
 func JsonbLength(jsonVal interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(jsonVal); err != nil {
+		panic(fmt.Sprintf("JsonbLength: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("jsonb_array_length(%v)", jsonVal))
 }
 
 func JsonKeys(jsonVal interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(jsonVal); err != nil {
+		panic(fmt.Sprintf("JsonKeys: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("json_object_keys(%v)", jsonVal))
 }
 
 func JsonbKeys(jsonVal interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(jsonVal); err != nil {
+		panic(fmt.Sprintf("JsonbKeys: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("jsonb_object_keys(%v)", jsonVal))
 }
 
 func JsonContains(jsonDoc, val interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(jsonDoc); err != nil {
+		panic(fmt.Sprintf("JsonContains: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(val); err != nil {
+		panic(fmt.Sprintf("JsonContains: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("json_contains(%v, %v)", jsonDoc, val))
 }
 
 func JsonbContains(jsonDoc, val interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(jsonDoc); err != nil {
+		panic(fmt.Sprintf("JsonbContains: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(val); err != nil {
+		panic(fmt.Sprintf("JsonbContains: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("jsonb_contains(%v, %v)", jsonDoc, val))
 }
 
@@ -353,18 +506,33 @@ func StringToArray(str, delimiter interface{}) sqlfunc.SqlFunc {
 
 // Encryption Functions
 func Md5(str interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Md5: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("md5(%v)", str))
 }
 
 func Sha256(str interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(str); err != nil {
+		panic(fmt.Sprintf("Sha256: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("sha256(%v)", str))
 }
 
 func Crypt(password, salt interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(password); err != nil {
+		panic(fmt.Sprintf("Crypt: %v", err))
+	}
+	if err := sqlfunc.ValidateSqlFuncInput(salt); err != nil {
+		panic(fmt.Sprintf("Crypt: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("crypt(%v, %v)", password, salt))
 }
 
 func GenSalt(method interface{}) sqlfunc.SqlFunc {
+	if err := sqlfunc.ValidateSqlFuncInput(method); err != nil {
+		panic(fmt.Sprintf("GenSalt: %v", err))
+	}
 	return sqlfunc.SqlFunc(fmt.Sprintf("gen_salt('%s')", method))
 }
 
