@@ -136,9 +136,16 @@ func (c *ColumnDef) buildSQL(dialect shared.Dialect) (string, error) {
 		parts = append(parts, "COMMENT", dialect.QuoteString(c.Comment))
 	}
 
-	// ON UPDATE (MySQL only, but safe to emit for others if set)
+	// ON UPDATE handling
 	if c.OnUpdate != "" {
-		parts = append(parts, "ON UPDATE", c.OnUpdate)
+		if dialect == shared.Postgres() {
+			// For PostgreSQL, we'll need to create a trigger to handle ON UPDATE
+			// This will be handled in the CreateTableBuilder to generate the trigger
+			// For now, we don't add ON UPDATE to the column definition for PostgreSQL
+		} else {
+			// For MySQL and other dialects, use ON UPDATE
+			parts = append(parts, "ON UPDATE", c.OnUpdate)
+		}
 	}
 
 	return strings.Join(parts, " "), nil

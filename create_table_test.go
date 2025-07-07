@@ -1,6 +1,7 @@
 package sqltk
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/sprylic/sqltk/ddl"
@@ -816,6 +817,118 @@ func TestCreateTable_ColumnOnUpdate(t *testing.T) {
 		if sql != wantSQL {
 			t.Errorf("got SQL %q, want %q", sql, wantSQL)
 		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+}
+
+func TestCreateTable_OnUpdate_DialectSpecific(t *testing.T) {
+	t.Run("MySQL OnUpdate", func(t *testing.T) {
+		q := ddl.CreateTable("users").
+			AddColumn(ddl.Column("id").Type("INT").PrimaryKey()).
+			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP"))
+
+		sql, args, err := q.WithDialect(MySQL()).Build()
+		wantSQL := "CREATE TABLE `users` (`id` INT, `updated_at` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (`id`))"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("PostgreSQL OnUpdate", func(t *testing.T) {
+		q := ddl.CreateTable("users").
+			AddColumn(ddl.Column("id").Type("INT").PrimaryKey()).
+			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP"))
+
+		sql, args, err := q.WithDialect(Postgres()).Build()
+		wantSQL := `CREATE TABLE "users" ("id" INT, "updated_at" TIMESTAMP, PRIMARY KEY ("id"));
+
+CREATE OR REPLACE FUNCTION "users_updated_at_update_trigger"()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW."updated_at" = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER "tr_users_updated_at_update"
+    BEFORE UPDATE ON "users"
+    FOR EACH ROW
+    EXECUTE FUNCTION "users_updated_at_update_trigger"();`
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("PostgreSQL OnUpdate with multiple columns", func(t *testing.T) {
+		q := ddl.CreateTable("users").
+			AddColumn(ddl.Column("id").Type("INT").PrimaryKey()).
+			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP")).
+			AddColumn(ddl.Column("modified_at").Type("TIMESTAMP").OnUpdate("NOW()"))
+
+		sql, args, err := q.WithDialect(Postgres()).Build()
+		// Should contain both trigger functions and triggers
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !strings.Contains(sql, `"users_updated_at_update_trigger"`) {
+			t.Error("missing trigger function for updated_at")
+		}
+		if !strings.Contains(sql, `"users_modified_at_update_trigger"`) {
+			t.Error("missing trigger function for modified_at")
+		}
+		if !strings.Contains(sql, `"tr_users_updated_at_update"`) {
+			t.Error("missing trigger for updated_at")
+		}
+		if !strings.Contains(sql, `"tr_users_modified_at_update"`) {
+			t.Error("missing trigger for modified_at")
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+}
+
+func TestCreateTable_OnUpdate_IfNotExists(t *testing.T) {
+	t.Run("PostgreSQL OnUpdate with IfNotExists", func(t *testing.T) {
+		q := ddl.CreateTable("users").
+			IfNotExists().
+			AddColumn(ddl.Column("id").Type("INT").PrimaryKey()).
+			AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP"))
+
+		sql, args, err := q.WithDialect(Postgres()).Build()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Should contain IF NOT EXISTS in table creation
+		if !strings.Contains(sql, "IF NOT EXISTS") {
+			t.Error("missing IF NOT EXISTS in table creation")
+		}
+
+		// Should contain DO block for trigger creation
+		if !strings.Contains(sql, "DO $$") {
+			t.Error("missing DO block for trigger creation")
+		}
+
+		// Should contain trigger existence check
+		if !strings.Contains(sql, "pg_trigger WHERE tgname =") {
+			t.Error("missing trigger existence check")
+		}
+
 		if len(args) != 0 {
 			t.Errorf("got args %v, want none", args)
 		}

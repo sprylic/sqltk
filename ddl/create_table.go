@@ -397,7 +397,7 @@ func ForeignKey(name string, columns ...string) *ForeignKeyBuilder {
 }
 
 // References sets the referenced table and columns.
-func (fkb *ForeignKeyBuilder) References(table string, columns ...string) *ForeignKeyBuilder {
+func (fkb *ForeignKeyBuilder) References(table string, column string, columns ...string) *ForeignKeyBuilder {
 	if fkb.err != nil {
 		return fkb
 	}
@@ -405,6 +405,9 @@ func (fkb *ForeignKeyBuilder) References(table string, columns ...string) *Forei
 		fkb.err = errors.New("referenced table is required")
 		return fkb
 	}
+
+	columns = append([]string{column}, columns...)
+
 	fkb.constraint.Reference = &ForeignKeyRef{
 		Table:   table,
 		Columns: columns,
@@ -605,7 +608,72 @@ func (b *CreateTableBuilder) Build() (string, []interface{}, error) {
 		sb.WriteString(strings.Join(optionSQLs, " "))
 	}
 
+	// For PostgreSQL, generate triggers for OnUpdate columns
+	if dialect == shared.Postgres() {
+		triggerSQL := b.buildPostgresTriggers(dialect)
+		if triggerSQL != "" {
+			sb.WriteString(";\n")
+			sb.WriteString(triggerSQL)
+		}
+	}
+
 	return sb.String(), args, nil
+}
+
+// buildPostgresTriggers generates PostgreSQL triggers for columns with OnUpdate
+func (b *CreateTableBuilder) buildPostgresTriggers(dialect shared.Dialect) string {
+	var triggers []string
+
+	for _, col := range b.columns {
+		if col.OnUpdate != "" {
+			// Generate trigger function name
+			triggerFuncName := fmt.Sprintf("%s_%s_update_trigger", b.tableName, col.Name)
+			triggerName := fmt.Sprintf("tr_%s_%s_update", b.tableName, col.Name)
+
+			// Create trigger function
+			triggerFunc := fmt.Sprintf(`
+CREATE OR REPLACE FUNCTION %s()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.%s = %s;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;`,
+				dialect.QuoteIdent(triggerFuncName),
+				dialect.QuoteIdent(col.Name),
+				col.OnUpdate)
+
+			// Create trigger
+			trigger := fmt.Sprintf(`
+CREATE OR REPLACE TRIGGER %s
+    BEFORE UPDATE ON %s
+    FOR EACH ROW
+    EXECUTE FUNCTION %s();`,
+				dialect.QuoteIdent(triggerName),
+				dialect.QuoteIdent(b.tableName),
+				dialect.QuoteIdent(triggerFuncName))
+
+			if b.ifNotExists {
+				// Use a DO block to check for trigger existence
+				doBlock := fmt.Sprintf(`
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = '%s'
+    ) THEN
+        %s
+    END IF;
+END$$;`,
+					triggerName,
+					trigger)
+				triggers = append(triggers, triggerFunc, doBlock)
+			} else {
+				triggers = append(triggers, triggerFunc, trigger)
+			}
+		}
+	}
+
+	return strings.Join(triggers, "\n")
 }
 
 // DebugSQL returns the SQL with arguments interpolated for debugging/logging only.
