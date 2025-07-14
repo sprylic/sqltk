@@ -21,11 +21,11 @@ func Update(table string) *UpdateBuilder {
 	return b
 }
 
-func (t *UpdateBuilder) SetTable(table string) {
+func (b *UpdateBuilder) SetTable(table string) {
 	if table == "" {
-		t.tableClauseString.err = errors.New("table must be set")
+		b.tableClauseString.err = errors.New("table must be set")
 	} else {
-		t.table = table
+		b.table = table
 	}
 }
 
