@@ -680,7 +680,7 @@ END$$;`,
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *CreateTableBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args)
+	return shared.InterpolateSQL(sql, args).GetUnsafeString()
 }
 
 // Column constraint methods that can be chained after convenience methods

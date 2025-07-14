@@ -121,11 +121,17 @@ func (a PGArray) Value() (driver.Value, error) {
 	return a.V, nil
 }
 
+type UnsafeSqlString string
+
+func (s UnsafeSqlString) GetUnsafeString() string {
+	return string(s)
+}
+
 // InterpolateSQL interpolates arguments into a SQL query for debugging/logging only.
 // DO NOT use the result for execution (not safe against SQL injection).
-func InterpolateSQL(query string, args []interface{}) string {
+func InterpolateSQL(query string, args []interface{}) UnsafeSqlString {
 	if len(args) == 0 {
-		return query
+		return UnsafeSqlString(query)
 	}
 
 	// Simple interpolation - replace ? with values
@@ -151,5 +157,5 @@ func InterpolateSQL(query string, args []interface{}) string {
 		}
 	}
 
-	return result
+	return UnsafeSqlString(result)
 }

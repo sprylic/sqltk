@@ -114,5 +114,5 @@ func (b *DropTableBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *DropTableBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args)
+	return shared.InterpolateSQL(sql, args).GetUnsafeString()
 }

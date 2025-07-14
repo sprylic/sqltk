@@ -109,5 +109,5 @@ func (b *DropViewBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *DropViewBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args)
+	return shared.InterpolateSQL(sql, args).GetUnsafeString()
 }

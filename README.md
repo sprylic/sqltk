@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/sprylic/sqltk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sprylic/sqltk/actions/workflows/ci.yml)
 
-A SQL toolkit for Go that provides composable query building and DDL operations.
+A SQL Construction Framework for Go that provides composable query building and DDL operations.
 
 ## Goals
 - **Thread Safe**: Safe for concurrent use.
@@ -156,6 +156,8 @@ q := sqltk.Select("id").From("users").Where(sqltk.NewStringCondition("active = ?
 
 // ✅ Raw conditions work directly (implements Condition interface)
 q := sqltk.Select("id").From("users").Where(sqltk.Raw("id = 1"))
+
+// For simple where clauses, it's best to use one of the specific Where methods (WhereEqual, WhereNotEqual, etc.)
 ```
 
 ### INSERT

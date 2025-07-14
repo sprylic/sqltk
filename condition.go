@@ -473,8 +473,8 @@ func (c *ConditionBuilder) Build() (string, []interface{}, error) {
 	return strings.Join(c.parts, " AND "), c.args, nil
 }
 
-// String returns the condition as a string (for debugging).
-func (c *ConditionBuilder) String() string {
+// GetUnsafeString returns the condition as a string (for debugging).
+func (c *ConditionBuilder) GetUnsafeString() string {
 	sql, args, err := c.Build()
 	if err != nil {
 		return fmt.Sprintf("ERROR: %v", err)
@@ -482,7 +482,7 @@ func (c *ConditionBuilder) String() string {
 	if len(args) == 0 {
 		return sql
 	}
-	return InterpolateSQL(sql, args)
+	return InterpolateSQL(sql, args).GetUnsafeString()
 }
 
 // CaseBuilder provides a fluent API for building CASE WHEN expressions.

@@ -138,5 +138,5 @@ func (b *PostgresInsertBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *InsertBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return InterpolateSQL(sql, args)
+	return InterpolateSQL(sql, args).GetUnsafeString()
 }

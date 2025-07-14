@@ -628,5 +628,5 @@ func (b *SelectBuilder) Compose(fns ...SelectFragment) *SelectBuilder {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *SelectBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return InterpolateSQL(sql, args)
+	return InterpolateSQL(sql, args).GetUnsafeString()
 }

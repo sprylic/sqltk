@@ -524,7 +524,7 @@ func TestConditionBuilder_Dialect(t *testing.T) {
 func TestConditionBuilder_String(t *testing.T) {
 	t.Run("debug string", func(t *testing.T) {
 		cond := NewCond().Equal("name", "john").And(NewCond().GreaterThan("age", 18))
-		debugStr := cond.String()
+		debugStr := cond.GetUnsafeString()
 		wantStr := "name = 'john' AND age > 18"
 		if debugStr != wantStr {
 			t.Errorf("got debug string %q, want %q", debugStr, wantStr)
