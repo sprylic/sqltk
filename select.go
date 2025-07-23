@@ -603,12 +603,6 @@ func (b *SelectBuilder) GetColumns() []string {
 	return cols
 }
 
-// MustSQL is a helper for internal use to get SQL for subqueries in joins (ignores args and errors).
-func (b *SelectBuilder) MustSQL() string {
-	sql, _, _ := b.Build()
-	return sql
-}
-
 // SelectFragment is a function that composes or modifies a SelectBuilder.
 type SelectFragment func(*SelectBuilder) *SelectBuilder
 
