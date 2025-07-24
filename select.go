@@ -603,18 +603,64 @@ func (b *SelectBuilder) GetColumns() []string {
 	return cols
 }
 
-// SelectFragment is a function that composes or modifies a SelectBuilder.
-type SelectFragment func(*SelectBuilder) *SelectBuilder
-
-// Compose applies one or more SelectFragment functions to the builder.
+// Compose combines this SelectBuilder with one or more other SelectBuilder instances.
+// This merges columns, joins, where conditions, group by, having, order by, limit, and offset.
+// The first builder's table and dialect are preserved.
 // Example:
 //
-//	isActive := func(b *SelectBuilder) *SelectBuilder { return b.Where("active = ?", true) }
-//	q := Select("id").From("users").Compose(isActive)
-func (b *SelectBuilder) Compose(fns ...SelectFragment) *SelectBuilder {
-	for _, fn := range fns {
-		b = fn(b)
+//	q1 := Select("id", "name").From("users").Where("active = ?", true)
+//	q2 := Select("email").From("users").Where("verified = ?", true)
+//	q := q1.Compose(q2) // Combines columns and merges where conditions
+func (b *SelectBuilder) Compose(builders ...*SelectBuilder) *SelectBuilder {
+	for _, other := range builders {
+		if other == nil {
+			continue
+		}
+
+		// Merge columns
+		b.columns = append(b.columns, other.columns...)
+
+		// Merge joins
+		b.joinClauses = append(b.joinClauses, other.joinClauses...)
+
+		// Merge where conditions
+		if other.whereClause.err != nil {
+			b.whereClause.err = other.whereClause.err
+		} else {
+			b.whereClause.whereParam = append(b.whereClause.whereParam, other.whereClause.whereParam...)
+			b.whereClause.whereRaw = append(b.whereClause.whereRaw, other.whereClause.whereRaw...)
+			b.whereClause.whereArgs = append(b.whereClause.whereArgs, other.whereClause.whereArgs...)
+		}
+
+		// Merge group by
+		b.groupBy = append(b.groupBy, other.groupBy...)
+		b.groupByRaw = append(b.groupByRaw, other.groupByRaw...)
+
+		// Merge having
+		b.havingParam = append(b.havingParam, other.havingParam...)
+		b.havingRaw = append(b.havingRaw, other.havingRaw...)
+		b.havingArgs = append(b.havingArgs, other.havingArgs...)
+
+		// Merge order by
+		b.orderBy = append(b.orderBy, other.orderBy...)
+		b.orderByRaw = append(b.orderByRaw, other.orderByRaw...)
+
+		// Use the most restrictive limit/offset
+		if other.limitSet && (!b.limitSet || other.limit < b.limit) {
+			b.limitSet = true
+			b.limit = other.limit
+		}
+		if other.offsetSet && (!b.offsetSet || other.offset > b.offset) {
+			b.offsetSet = true
+			b.offset = other.offset
+		}
+
+		// Preserve distinct if any builder has it
+		if other.distinct {
+			b.distinct = true
+		}
 	}
+
 	return b
 }
 

@@ -555,18 +555,14 @@ func TestSelectBuilder_Alias(t *testing.T) {
 }
 
 func TestSelectBuilder_Compose(t *testing.T) {
-	isActive := func(b *SelectBuilder) *SelectBuilder {
-		return b.Where(NewStringCondition("active = ?", true))
-	}
-	isAdult := func(b *SelectBuilder) *SelectBuilder {
-		return b.Where(NewStringCondition("age >= ?", 18))
-	}
+	t.Run("compose single builder", func(t *testing.T) {
+		q1 := Select("id", "name").From("users").Where(NewStringCondition("active = ?", true))
+		q2 := Select("email").From("users").Where(NewStringCondition("verified = ?", true))
 
-	t.Run("compose single fragment", func(t *testing.T) {
-		q := Select("id").From("users").Compose(isActive)
+		q := q1.Compose(q2)
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT id FROM users WHERE active = ?"
-		wantArgs := []interface{}{true}
+		wantSQL := "SELECT id, name, email FROM users WHERE active = ? AND verified = ?"
+		wantArgs := []interface{}{true, true}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -578,11 +574,15 @@ func TestSelectBuilder_Compose(t *testing.T) {
 		}
 	})
 
-	t.Run("compose multiple fragments", func(t *testing.T) {
-		q := Select("id").From("users").Compose(isActive, isAdult)
+	t.Run("compose multiple builders", func(t *testing.T) {
+		q1 := Select("id", "name").From("users").Where(NewStringCondition("active = ?", true))
+		q2 := Select("email").From("users").Where(NewStringCondition("verified = ?", true))
+		q3 := Select("created_at").From("users").OrderBy("created_at DESC")
+
+		q := q1.Compose(q2, q3)
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT id FROM users WHERE active = ? AND age >= ?"
-		wantArgs := []interface{}{true, 18}
+		wantSQL := "SELECT id, name, email, created_at FROM users WHERE active = ? AND verified = ? ORDER BY created_at DESC"
+		wantArgs := []interface{}{true, true}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -594,13 +594,29 @@ func TestSelectBuilder_Compose(t *testing.T) {
 		}
 	})
 
-	t.Run("compose order matters", func(t *testing.T) {
-		first := func(b *SelectBuilder) *SelectBuilder { return b.Where(NewStringCondition("x = ?", 1)) }
-		second := func(b *SelectBuilder) *SelectBuilder { return b.Where(NewStringCondition("y = ?", 2)) }
-		q := Select("id").From("users").Compose(first, second)
+	t.Run("compose with joins", func(t *testing.T) {
+		q1 := Select("u.id", "u.name").From("users u").Join("posts p").On("p.user_id", "u.id")
+		q2 := Select("u.email").From("users u").LeftJoin("profiles pr").On("pr.user_id", "u.id")
+
+		q := q1.Compose(q2)
+		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT u.id, u.name, u.email FROM users u JOIN posts p ON p.user_id = u.id LEFT JOIN profiles pr ON pr.user_id = u.id"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+	})
+
+	t.Run("compose with group by and having", func(t *testing.T) {
+		q1 := Select("user_id", "COUNT(*)").From("orders").GroupBy("user_id").Having(NewStringCondition("COUNT(*) > ?", 5))
+		q2 := Select("SUM(amount)").From("orders").GroupBy("order_id").Having(NewStringCondition("SUM(amount) > ?", 1000))
+
+		q := q1.Compose(q2)
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT id FROM users WHERE x = ? AND y = ?"
-		wantArgs := []interface{}{1, 2}
+		wantSQL := "SELECT user_id, COUNT(*), SUM(amount) FROM orders GROUP BY user_id, order_id HAVING COUNT(*) > ? AND SUM(amount) > ?"
+		wantArgs := []interface{}{5, 1000}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -612,10 +628,99 @@ func TestSelectBuilder_Compose(t *testing.T) {
 		}
 	})
 
-	t.Run("compose propagates error", func(t *testing.T) {
-		// This test demonstrates that the compiler will catch invalid types
-		// We can't test this at runtime since it's a compile-time error
-		t.Skip("This is now a compile-time error, not a runtime error")
+	t.Run("compose with limit and offset", func(t *testing.T) {
+		q1 := Select("id").From("users").Limit(10)
+		q2 := Select("name").From("users").Offset(5)
+		q3 := Select("email").From("users").Limit(5).Offset(10)
+
+		q := q1.Compose(q2, q3)
+		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
+		// Should use most restrictive limit (5) and highest offset (10)
+		wantSQL := "SELECT id, name, email FROM users LIMIT 5 OFFSET 10"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+	})
+
+	t.Run("compose with distinct", func(t *testing.T) {
+		q1 := Select("id").From("users")
+		q2 := Select("name").From("users").Distinct()
+
+		q := q1.Compose(q2)
+		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT DISTINCT id, name FROM users"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+	})
+
+	t.Run("compose preserves first builder table", func(t *testing.T) {
+		q1 := Select("id").From("users")
+		q2 := Select("name").From("posts") // Different table
+
+		q := q1.Compose(q2)
+		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id, name FROM users" // Should use first builder's table
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+	})
+
+	t.Run("compose with nil builders", func(t *testing.T) {
+		q1 := Select("id").From("users")
+		var q2 *SelectBuilder = nil
+
+		q := q1.Compose(q2)
+		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id FROM users" // Should ignore nil builder
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+	})
+
+	t.Run("compose with subqueries", func(t *testing.T) {
+		sub1 := Select("COUNT(*)").From("posts").Where(NewStringCondition("user_id = users.id"))
+		sub2 := Select("MAX(created_at)").From("posts").Where(NewStringCondition("user_id = users.id"))
+
+		q1 := Select("id", sub1).From("users")
+		q2 := Select("name", sub2).From("users")
+
+		q := q1.Compose(q2)
+		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id, (SELECT COUNT(*) FROM posts WHERE user_id = users.id), name, (SELECT MAX(created_at) FROM posts WHERE user_id = users.id) FROM users"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+	})
+
+	t.Run("compose with aliases", func(t *testing.T) {
+		q1 := Select(Alias("id", "user_id")).From("users")
+		q2 := Select(Alias("name", "user_name")).From("users")
+
+		q := q1.Compose(q2)
+		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id AS user_id, name AS user_name FROM users"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
 	})
 }
 
