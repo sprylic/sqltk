@@ -55,7 +55,8 @@ func (w *whereClause) buildWhereSQL(dialect Dialect, placeholderIdx *int) (strin
 		wheres = append(wheres, w.whereRaw...)
 	}
 	if len(wheres) == 0 {
-		return "", nil
+		// Even if there's no WHERE clause, return any stored args (from subqueries)
+		return "", w.whereArgs
 	}
 	whereSQL := strings.Join(wheres, " AND ")
 	for strings.Contains(whereSQL, "?") && dialect.Placeholder(0) != "?" {

@@ -186,6 +186,40 @@ func (c *ConditionBuilder) In(column string, values ...interface{}) *ConditionBu
 		quotedCol = dialect.QuoteIdent(column)
 	}
 
+	// Check if any value is a subquery
+	hasSubquery := false
+	for _, value := range values {
+		if _, ok := value.(*SelectBuilder); ok {
+			hasSubquery = true
+			break
+		}
+	}
+
+	if hasSubquery {
+		// Handle subqueries in IN clause
+		if len(values) != 1 {
+			c.err = fmt.Errorf("IN with subquery can only have one subquery value")
+			return c
+		}
+
+		subquery, ok := values[0].(*SelectBuilder)
+		if !ok {
+			c.err = fmt.Errorf("IN with subquery must be *SelectBuilder")
+			return c
+		}
+
+		sql, args, err := subquery.Build()
+		if err != nil {
+			c.err = fmt.Errorf("IN subquery error: %w", err)
+			return c
+		}
+
+		c.parts = append(c.parts, quotedCol+" IN (("+sql+"))")
+		c.args = append(c.args, args...)
+		return c
+	}
+
+	// Handle regular values
 	placeholders := make([]string, len(values))
 	for i := range values {
 		placeholders[i] = "?"
@@ -222,6 +256,40 @@ func (c *ConditionBuilder) NotIn(column string, values ...interface{}) *Conditio
 		quotedCol = dialect.QuoteIdent(column)
 	}
 
+	// Check if any value is a subquery
+	hasSubquery := false
+	for _, value := range values {
+		if _, ok := value.(*SelectBuilder); ok {
+			hasSubquery = true
+			break
+		}
+	}
+
+	if hasSubquery {
+		// Handle subqueries in NOT IN clause
+		if len(values) != 1 {
+			c.err = fmt.Errorf("NOT IN with subquery can only have one subquery value")
+			return c
+		}
+
+		subquery, ok := values[0].(*SelectBuilder)
+		if !ok {
+			c.err = fmt.Errorf("NOT IN with subquery must be *SelectBuilder")
+			return c
+		}
+
+		sql, args, err := subquery.Build()
+		if err != nil {
+			c.err = fmt.Errorf("NOT IN subquery error: %w", err)
+			return c
+		}
+
+		c.parts = append(c.parts, quotedCol+" NOT IN (("+sql+"))")
+		c.args = append(c.args, args...)
+		return c
+	}
+
+	// Handle regular values
 	placeholders := make([]string, len(values))
 	for i := range values {
 		placeholders[i] = "?"

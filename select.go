@@ -214,21 +214,25 @@ func (jb *JoinBuilder) On(left, right string) *SelectBuilder {
 	case Raw:
 		clause += string(t)
 	case *SelectBuilder:
-		subSQL, _, subErr := t.Build()
+		subSQL, subArgs, subErr := t.Build()
 		if subErr != nil {
 			jb.parent.whereClause.err = fmt.Errorf("join subquery error: %w", subErr)
 			return jb.parent
 		}
 		clause += "(" + subSQL + ")"
+		// Store the subquery args in the parent's whereClause for later use
+		jb.parent.whereClause.whereArgs = append(jb.parent.whereClause.whereArgs, subArgs...)
 	case AliasExpr:
 		switch expr := t.Expr.(type) {
 		case *SelectBuilder:
-			subSQL, _, subErr := expr.Build()
+			subSQL, subArgs, subErr := expr.Build()
 			if subErr != nil {
 				jb.parent.whereClause.err = fmt.Errorf("join alias subquery error: %w", subErr)
 				return jb.parent
 			}
 			clause += "(" + subSQL + ") AS " + t.Alias
+			// Store the subquery args in the parent's whereClause for later use
+			jb.parent.whereClause.whereArgs = append(jb.parent.whereClause.whereArgs, subArgs...)
 		case string:
 			clause += dialect.QuoteIdent(expr) + " AS " + t.Alias
 		case Raw:
@@ -454,6 +458,9 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 	if whereSQL != "" {
 		sb.WriteString(" WHERE ")
 		sb.WriteString(whereSQL)
+		args = append(args, whereArgs...)
+	} else {
+		// Even if there's no WHERE clause, we need to include any args from subqueries
 		args = append(args, whereArgs...)
 	}
 
