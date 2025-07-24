@@ -25,7 +25,7 @@ func TestSelectBuilder(t *testing.T) {
 	})
 
 	t.Run("select with where", func(t *testing.T) {
-		q := Select("id").From("users").Where(NewStringCondition("active = ?", true))
+		q := Select("id").From("users").WhereEqual("active", true)
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id FROM users WHERE active = ?"
 		wantArgs := []interface{}{true}
@@ -73,7 +73,7 @@ func TestSelectBuilder(t *testing.T) {
 	})
 
 	t.Run("where column is null", func(t *testing.T) {
-		q := Select("id").From("users").WhereEqual("deleted_at", nil)
+		q := Select("id").From("users").WhereNull("deleted_at")
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id FROM users WHERE deleted_at IS NULL"
 		if err != nil {
@@ -88,7 +88,7 @@ func TestSelectBuilder(t *testing.T) {
 	})
 
 	t.Run("where column is not null", func(t *testing.T) {
-		q := Select("id").From("users").WhereNotEqual("created_at", nil)
+		q := Select("id").From("users").WhereNotNull("created_at")
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id FROM users WHERE created_at IS NOT NULL"
 		if err != nil {
@@ -115,7 +115,7 @@ func TestSelectBuilder(t *testing.T) {
 	})
 
 	t.Run("multiple where clauses", func(t *testing.T) {
-		q := Select("id").From("users").Where(NewStringCondition("active = ?", true)).Where(NewStringCondition("age > ?", 18))
+		q := Select("id").From("users").WhereEqual("active", true).WhereGreaterThan("age", 18)
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id FROM users WHERE active = ? AND age > ?"
 		wantArgs := []interface{}{true, 18}
@@ -148,7 +148,7 @@ func TestSelectBuilder_RawWhere(t *testing.T) {
 	})
 
 	t.Run("mixed parameterized and raw", func(t *testing.T) {
-		q := Select("id").From("users").Where(NewStringCondition("active = ?", true)).Where(AsCondition(Raw("age > 18")))
+		q := Select("id").From("users").Where(NewCond().Equal("active", true).And(NewCond().Raw("age > 18")))
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id FROM users WHERE active = ? AND age > 18"
 		wantArgs := []interface{}{true}
@@ -196,7 +196,7 @@ func TestSelectBuilder_GroupBy_Having_OrderBy(t *testing.T) {
 	})
 
 	t.Run("having parameterized", func(t *testing.T) {
-		q := Select("id").From("users").GroupBy("id").Having(NewStringCondition("COUNT(*) > ?", 1))
+		q := Select("id").From("users").GroupBy("id").Having(NewCond().GreaterThan("COUNT(*)", 1))
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id FROM users GROUP BY id HAVING COUNT(*) > ?"
 		wantArgs := []interface{}{1}
@@ -252,9 +252,9 @@ func TestSelectBuilder_GroupBy_Having_OrderBy(t *testing.T) {
 
 	t.Run("full query with all clauses", func(t *testing.T) {
 		q := Select("id").From("users").
-			Where(NewStringCondition("active = ?", true)).
+			WhereEqual("active", true).
 			GroupBy("id").
-			Having(NewStringCondition("COUNT(*) > ?", 1)).
+			Having(NewCond().GreaterThan("COUNT(*)", 1)).
 			OrderBy("id DESC")
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id FROM users WHERE active = ? GROUP BY id HAVING COUNT(*) > ? ORDER BY id DESC"
@@ -369,7 +369,7 @@ func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
 	t.Run("full query with join, limit, offset", func(t *testing.T) {
 		q := Select("u.id", "p.id").From("users u").
 			Join("posts p").On("p.user_id", "u.id").
-			Where(NewStringCondition("u.active = ?", true)).
+			WhereEqual("u.active", true).
 			OrderBy("u.id DESC").
 			Limit(20).
 			Offset(10)
@@ -442,7 +442,7 @@ func TestSelectBuilder_Distinct_Subquery(t *testing.T) {
 	})
 
 	t.Run("subquery as column with args", func(t *testing.T) {
-		sub := Select("COUNT(*)").From("posts").Where(NewStringCondition("posts.user_id = ?", 42))
+		sub := Select("COUNT(*)").From("posts").WhereEqual("posts.user_id", 42)
 		q := Select("id", sub).From("users")
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id, (SELECT COUNT(*) FROM posts WHERE posts.user_id = ?) FROM users"
@@ -504,7 +504,7 @@ func TestSelectBuilder_Alias(t *testing.T) {
 	})
 
 	t.Run("alias subquery as column", func(t *testing.T) {
-		sub := Select("COUNT(*)").From("orders").Where(NewStringCondition("orders.user_id = users.id"))
+		sub := Select("COUNT(*)").From("orders").Where(Raw("orders.user_id = users.id"))
 		q := Select(Alias(sub, "order_count")).From("users")
 		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT (SELECT COUNT(*) FROM orders WHERE orders.user_id = users.id) AS order_count FROM users"
@@ -517,7 +517,7 @@ func TestSelectBuilder_Alias(t *testing.T) {
 	})
 
 	t.Run("alias subquery in FROM", func(t *testing.T) {
-		sub := Select("id").From("orders").Where(NewStringCondition("amount > ?", 100))
+		sub := Select("id").From("orders").WhereGreaterThan("amount", 100)
 		q := Select("o.id").From(Alias(sub, "o"))
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT o.id FROM (SELECT id FROM orders WHERE amount > ?) AS o"
@@ -556,8 +556,8 @@ func TestSelectBuilder_Alias(t *testing.T) {
 
 func TestSelectBuilder_Compose(t *testing.T) {
 	t.Run("compose single builder", func(t *testing.T) {
-		q1 := Select("id", "name").From("users").Where(NewStringCondition("active = ?", true))
-		q2 := Select("email").From("users").Where(NewStringCondition("verified = ?", true))
+		q1 := Select("id", "name").From("users").WhereEqual("active", true)
+		q2 := Select("email").From("users").WhereEqual("verified", true)
 
 		q := q1.Compose(q2)
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
@@ -575,8 +575,8 @@ func TestSelectBuilder_Compose(t *testing.T) {
 	})
 
 	t.Run("compose multiple builders", func(t *testing.T) {
-		q1 := Select("id", "name").From("users").Where(NewStringCondition("active = ?", true))
-		q2 := Select("email").From("users").Where(NewStringCondition("verified = ?", true))
+		q1 := Select("id", "name").From("users").WhereEqual("active", true)
+		q2 := Select("email").From("users").WhereEqual("verified", true)
 		q3 := Select("created_at").From("users").OrderBy("created_at DESC")
 
 		q := q1.Compose(q2, q3)
@@ -610,8 +610,8 @@ func TestSelectBuilder_Compose(t *testing.T) {
 	})
 
 	t.Run("compose with group by and having", func(t *testing.T) {
-		q1 := Select("user_id", "COUNT(*)").From("orders").GroupBy("user_id").Having(NewStringCondition("COUNT(*) > ?", 5))
-		q2 := Select("SUM(amount)").From("orders").GroupBy("order_id").Having(NewStringCondition("SUM(amount) > ?", 1000))
+		q1 := Select("user_id", "COUNT(*)").From("orders").GroupBy("user_id").Having(NewCond().GreaterThan("COUNT(*)", 5))
+		q2 := Select("SUM(amount)").From("orders").GroupBy("order_id").Having(NewCond().GreaterThan("SUM(amount)", 1000))
 
 		q := q1.Compose(q2)
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
@@ -691,8 +691,8 @@ func TestSelectBuilder_Compose(t *testing.T) {
 	})
 
 	t.Run("compose with subqueries", func(t *testing.T) {
-		sub1 := Select("COUNT(*)").From("posts").Where(NewStringCondition("user_id = users.id"))
-		sub2 := Select("MAX(created_at)").From("posts").Where(NewStringCondition("user_id = users.id"))
+		sub1 := Select("COUNT(*)").From("posts").Where(Raw("user_id = users.id"))
+		sub2 := Select("MAX(created_at)").From("posts").Where(Raw("user_id = users.id"))
 
 		q1 := Select("id", sub1).From("users")
 		q2 := Select("name", sub2).From("users")
@@ -726,7 +726,7 @@ func TestSelectBuilder_Compose(t *testing.T) {
 
 func TestSelectBuilder_Dialect(t *testing.T) {
 	t.Run("no quote ident dialect", func(t *testing.T) {
-		q := Select("id", "name").From("users").Where(NewStringCondition("id = ? AND name = ?", 1, "bob")).WithDialect(NoQuoteIdent())
+		q := Select("id", "name").From("users").Where(NewCond().Equal("id", 1).And(NewCond().Equal("name", "bob"))).WithDialect(NoQuoteIdent())
 		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id, name FROM users WHERE id = ? AND name = ?"
 		if err != nil {
@@ -738,7 +738,7 @@ func TestSelectBuilder_Dialect(t *testing.T) {
 	})
 
 	t.Run("mysql dialect", func(t *testing.T) {
-		q := Select("id", "name").From("users").Where(NewStringCondition("id = ? AND name = ?", 1, "bob")).WithDialect(MySQL())
+		q := Select("id", "name").From("users").Where(NewCond().Equal("id", 1).And(NewCond().Equal("name", "bob"))).WithDialect(MySQL())
 		sql, _, err := q.WithDialect(MySQL()).Build()
 		wantSQL := "SELECT `id`, `name` FROM `users` WHERE id = ? AND name = ?"
 		if err != nil {
@@ -750,7 +750,7 @@ func TestSelectBuilder_Dialect(t *testing.T) {
 	})
 
 	t.Run("postgres dialect", func(t *testing.T) {
-		q := Select("id", "name").From("users").Where(NewStringCondition("id = ? AND name = ?", 1, "bob")).WithDialect(Postgres())
+		q := Select("id", "name").From("users").Where(NewCond().Equal("id", 1).And(NewCond().Equal("name", "bob"))).WithDialect(Postgres())
 		sql, _, err := q.WithDialect(Postgres()).Build()
 		wantSQL := "SELECT \"id\", \"name\" FROM \"users\" WHERE id = $1 AND name = $2"
 		if err != nil {
@@ -874,7 +874,7 @@ func TestSelectBuilder_GetColumns(t *testing.T) {
 func TestSelectBuilder_ComplexQueries(t *testing.T) {
 	t.Run("complex nested subqueries", func(t *testing.T) {
 		// Subquery in FROM with another subquery in WHERE
-		innerSub := Select("user_id").From("posts").Where(NewStringCondition("created_at > ?", "2023-01-01"))
+		innerSub := Select("user_id").From("posts").Where(NewCond().GreaterThan("created_at", "2023-01-01"))
 		outerSub := Select("id", "name").From("users").Where(NewCond().In("id", innerSub))
 
 		q := Select("u.id", "u.name", "p.title").From("users u").
@@ -901,9 +901,9 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 			Join("orders o").On("o.user_id", "u.id").
 			LeftJoin("posts p").On("p.user_id", "u.id").
 			RightJoin("payments pay").On("pay.order_id", "o.id").
-			Where(NewStringCondition("u.active = ?", true)).
-			Where(NewStringCondition("o.status = ?", "completed")).
-			Where(NewStringCondition("pay.amount > ?", 100))
+			WhereEqual("u.active", true).
+			WhereEqual("o.status", "completed").
+			Where(NewCond().GreaterThan("pay.amount", 100))
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT u.id, u.name, o.id, p.title FROM users u JOIN orders o ON o.user_id = u.id LEFT JOIN posts p ON p.user_id = u.id RIGHT JOIN payments pay ON pay.order_id = o.id WHERE u.active = ? AND o.status = ? AND pay.amount > ?"
@@ -930,11 +930,11 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 			Alias(mysqlfunc.Min("created_at"), "first_order"),
 			Alias(mysqlfunc.Max("created_at"), "last_order"),
 		).From("orders").
-			Where(NewStringCondition("status = ?", "completed")).
+			WhereEqual("status", "completed").
 			GroupBy("user_id").
 			GroupBy("category").
-			Having(NewStringCondition("COUNT(*) > ?", 5)).
-			Having(NewStringCondition("SUM(amount) > ?", 1000)).
+			Having(NewCond().GreaterThan("COUNT(*)", 5)).
+			Having(NewCond().GreaterThan("SUM(amount)", 1000)).
 			OrderBy("total_amount DESC")
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
@@ -953,12 +953,12 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 
 	t.Run("complex exists subquery", func(t *testing.T) {
 		existsSub := Select("1").From("orders o").
-			Where(NewStringCondition("o.user_id = u.id")).
-			Where(NewStringCondition("o.amount > ?", 1000)).
-			Where(NewStringCondition("o.created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)"))
+			Where(Raw("o.user_id = u.id")).
+			Where(NewCond().GreaterThan("o.amount", 1000)).
+			Where(NewCond().Raw("o.created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)"))
 
 		q := Select("u.id", "u.name").From("users u").
-			Where(NewStringCondition("u.active = ?", true)).
+			WhereEqual("u.active", true).
 			Where(NewCond().Exists(existsSub))
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
@@ -978,15 +978,15 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 	t.Run("complex union-like query with subqueries", func(t *testing.T) {
 		// Simulating a UNION-like structure with subqueries
 		recentOrders := Select("user_id", "amount", Alias("'recent'", "period")).From("orders").
-			Where(NewStringCondition("created_at > ?", "2023-01-01"))
+			WhereGreaterThan("created_at", "2023-01-01")
 
 		// oldOrders := Select("user_id", "amount", Alias("'old'", "period")).From("orders").
-		// 	Where(NewStringCondition("created_at <= ?", "2023-01-01"))
+		// 	WhereLessThanOrEqual("created_at", "2023-01-01")
 
 		q := Select("u.id", "u.name", "o.amount", "o.period").
 			From("users u").
 			Join(Alias(recentOrders, "o")).On("o.user_id", "u.id").
-			Where(NewStringCondition("u.active = ?", true))
+			WhereEqual("u.active", true)
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT u.id, u.name, o.amount, o.period FROM users u JOIN (SELECT user_id, amount, 'recent' AS period FROM orders WHERE created_at > ?) AS o ON o.user_id = u.id WHERE u.active = ?"
@@ -1032,8 +1032,8 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 			LeftJoin("posts post").On("post.user_id", "u.id").
 			RightJoin("comments c").On("c.post_id", "post.id").
 			FullJoin("tags t").On("t.post_id", "post.id").
-			Where(NewStringCondition("u.active = ?", true)).
-			Where(NewStringCondition("post.status = ?", "published"))
+			WhereEqual("u.active", true).
+			WhereEqual("post.status", "published")
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT u.id, u.name, p.title, c.content FROM users u JOIN profiles p ON p.user_id = u.id LEFT JOIN posts post ON post.user_id = u.id RIGHT JOIN comments c ON c.post_id = post.id FULL JOIN tags t ON t.post_id = post.id WHERE u.active = ? AND post.status = ?"
@@ -1051,17 +1051,17 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 
 	t.Run("complex subquery in where with multiple conditions", func(t *testing.T) {
 		sub := Select("user_id").From("orders").
-			Where(NewStringCondition("amount > ?", 1000)).
-			Where(NewStringCondition("status = ?", "completed")).
+			WhereGreaterThan("amount", 1000).
+			WhereEqual("status", "completed").
 			GroupBy("user_id").
-			Having(NewStringCondition("COUNT(*) > ?", 5))
+			Having(NewCond().GreaterThan("COUNT(*)", 5))
 
 		q := Select("id", "name", "email").From("users").
-			Where(NewStringCondition("active = ?", true)).
-			Where(NewStringCondition("id IN (?)", sub))
+			WhereEqual("active", true).
+			Where(NewCond().In("id", sub))
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT id, name, email FROM users WHERE active = ? AND id IN (?)"
+		wantSQL := "SELECT id, name, email FROM users WHERE active = ? AND id IN ((SELECT user_id FROM orders WHERE amount > ? AND status = ? GROUP BY user_id HAVING COUNT(*) > ?))"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1077,7 +1077,7 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 	t.Run("complex order by with multiple columns", func(t *testing.T) {
 		q := Select("id", "name", "created_at", "last_login").
 			From("users").
-			Where(NewStringCondition("active = ?", true)).
+			WhereEqual("active", true).
 			OrderBy("created_at DESC").
 			OrderBy("last_login ASC").
 			OrderBy("name").
@@ -1102,13 +1102,163 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 		q := Select("user_id", "category", "status").
 			Distinct().
 			From("orders").
-			Where(NewStringCondition("amount > ?", 100)).
+			WhereGreaterThan("amount", 100).
 			OrderBy("user_id").
 			OrderBy("category")
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT DISTINCT user_id, category, status FROM orders WHERE amount > ? ORDER BY user_id, category"
 		wantArgs := []interface{}{100}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+}
+
+func TestSelectBuilder_ConvenienceWhereMethods(t *testing.T) {
+	t.Run("where null and not null", func(t *testing.T) {
+		q := Select("id").From("users").WhereNull("deleted_at").WhereNotNull("created_at")
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id FROM users WHERE deleted_at IS NULL AND created_at IS NOT NULL"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("where comparison operators", func(t *testing.T) {
+		q := Select("id").From("users").
+			WhereGreaterThan("age", 18).
+			WhereLessThan("age", 65).
+			WhereGreaterThanOrEqual("score", 80).
+			WhereLessThanOrEqual("score", 100)
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id FROM users WHERE age > ? AND age < ? AND score >= ? AND score <= ?"
+		wantArgs := []interface{}{18, 65, 80, 100}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("where like and not like", func(t *testing.T) {
+		q := Select("id").From("users").
+			WhereLike("name", "%john%").
+			WhereNotLike("email", "%spam%")
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id FROM users WHERE name LIKE ? AND email NOT LIKE ?"
+		wantArgs := []interface{}{"%john%", "%spam%"}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("where in and not in", func(t *testing.T) {
+		q := Select("id").From("users").
+			WhereIn("status", "active", "pending").
+			WhereNotIn("role", "admin", "moderator")
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id FROM users WHERE status IN (?, ?) AND role NOT IN (?, ?)"
+		wantArgs := []interface{}{"active", "pending", "admin", "moderator"}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("where between and not between", func(t *testing.T) {
+		q := Select("id").From("users").
+			WhereBetween("age", 18, 65).
+			WhereNotBetween("score", 0, 50)
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id FROM users WHERE age BETWEEN ? AND ? AND score NOT BETWEEN ? AND ?"
+		wantArgs := []interface{}{18, 65, 0, 50}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if !reflect.DeepEqual(args, wantArgs) {
+			t.Errorf("got args %v, want %v", args, wantArgs)
+		}
+	})
+
+	t.Run("where exists and not exists", func(t *testing.T) {
+		sub1 := Select("1").From("orders").WhereColsEqual("user_id", "users.id")
+		sub2 := Select("1").From("posts").WhereColsEqual("user_id", "users.id")
+
+		q := Select("id").From("users").
+			WhereExists(sub1).
+			WhereNotExists(sub2)
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id FROM users WHERE EXISTS (SELECT 1 FROM orders WHERE user_id = users.id) AND NOT EXISTS (SELECT 1 FROM posts WHERE user_id = users.id)"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("where columns equal", func(t *testing.T) {
+		q := Select("id").From("users").WhereColsEqual("user_id", "users.id")
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id FROM users WHERE user_id = users.id"
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != wantSQL {
+			t.Errorf("got SQL %q, want %q", sql, wantSQL)
+		}
+		if len(args) != 0 {
+			t.Errorf("got args %v, want none", args)
+		}
+	})
+
+	t.Run("complex combination of convenience methods", func(t *testing.T) {
+		q := Select("id", "name", "email").From("users").
+			WhereEqual("active", true).
+			WhereNotNull("email").
+			WhereGreaterThan("age", 18).
+			WhereLessThan("age", 65).
+			WhereIn("status", "active", "pending").
+			WhereLike("name", "%john%").
+			WhereBetween("score", 70, 100)
+
+		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
+		wantSQL := "SELECT id, name, email FROM users WHERE active = ? AND email IS NOT NULL AND age > ? AND age < ? AND status IN (?, ?) AND name LIKE ? AND score BETWEEN ? AND ?"
+		wantArgs := []interface{}{true, 18, 65, "active", "pending", "%john%", 70, 100}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

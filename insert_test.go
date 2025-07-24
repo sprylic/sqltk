@@ -115,7 +115,7 @@ func TestPostgresInsertBuilder_Returning(t *testing.T) {
 func TestPostgresInsertBuilder_PGJSON(t *testing.T) {
 	pq := NewPostgresInsert("users")
 	jsonVal := map[string]interface{}{"foo": 1, "bar": []int{2, 3}}
-	pq.InsertBuilder = pq.InsertBuilder.Columns("name", "data").Values("Alice", PGJSON{jsonVal})
+	pq.InsertBuilder = pq.InsertBuilder.Columns("name", "data").Values("Alice", PGJSON{V: jsonVal})
 	pq = pq.Returning("id")
 	sql, args, err := pq.Build()
 	wantSQL := "INSERT INTO \"users\" (\"name\", \"data\") VALUES ($1, $2) RETURNING id"
@@ -148,7 +148,7 @@ func TestPostgresInsertBuilder_PGJSON(t *testing.T) {
 func TestPostgresInsertBuilder_PGArray(t *testing.T) {
 	pq := NewPostgresInsert("users")
 	arrVal := []string{"foo", "bar"}
-	pq.InsertBuilder = pq.InsertBuilder.Columns("tags").Values(PGArray{arrVal})
+	pq.InsertBuilder = pq.InsertBuilder.Columns("tags").Values(PGArray{V: arrVal})
 	pq = pq.Returning("id")
 	sql, args, err := pq.Build()
 	wantSQL := "INSERT INTO \"users\" (\"tags\") VALUES ($1) RETURNING id"

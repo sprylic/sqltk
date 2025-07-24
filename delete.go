@@ -37,6 +37,96 @@ func (b *DeleteBuilder) WhereNotEqual(column string, value interface{}) *DeleteB
 	return b
 }
 
+// WhereNull adds a WHERE clause for NULL check (column IS NULL).
+func (b *DeleteBuilder) WhereNull(column string) *DeleteBuilder {
+	b.Where(NewCond().IsNull(column))
+	return b
+}
+
+// WhereNotNull adds a WHERE clause for NOT NULL check (column IS NOT NULL).
+func (b *DeleteBuilder) WhereNotNull(column string) *DeleteBuilder {
+	b.Where(NewCond().IsNotNull(column))
+	return b
+}
+
+// WhereGreaterThan adds a WHERE clause for greater than comparison (column > value).
+func (b *DeleteBuilder) WhereGreaterThan(column string, value interface{}) *DeleteBuilder {
+	b.Where(NewCond().GreaterThan(column, value))
+	return b
+}
+
+// WhereGreaterThanOrEqual adds a WHERE clause for greater than or equal comparison (column >= value).
+func (b *DeleteBuilder) WhereGreaterThanOrEqual(column string, value interface{}) *DeleteBuilder {
+	b.Where(NewCond().GreaterThanOrEqual(column, value))
+	return b
+}
+
+// WhereLessThan adds a WHERE clause for less than comparison (column < value).
+func (b *DeleteBuilder) WhereLessThan(column string, value interface{}) *DeleteBuilder {
+	b.Where(NewCond().LessThan(column, value))
+	return b
+}
+
+// WhereLessThanOrEqual adds a WHERE clause for less than or equal comparison (column <= value).
+func (b *DeleteBuilder) WhereLessThanOrEqual(column string, value interface{}) *DeleteBuilder {
+	b.Where(NewCond().LessThanOrEqual(column, value))
+	return b
+}
+
+// WhereLike adds a WHERE clause for LIKE pattern matching (column LIKE pattern).
+func (b *DeleteBuilder) WhereLike(column string, pattern string) *DeleteBuilder {
+	b.Where(NewCond().Like(column, pattern))
+	return b
+}
+
+// WhereNotLike adds a WHERE clause for NOT LIKE pattern matching (column NOT LIKE pattern).
+func (b *DeleteBuilder) WhereNotLike(column string, pattern string) *DeleteBuilder {
+	b.Where(NewCond().NotLike(column, pattern))
+	return b
+}
+
+// WhereIn adds a WHERE clause for IN condition (column IN (values...)).
+func (b *DeleteBuilder) WhereIn(column string, values ...interface{}) *DeleteBuilder {
+	b.Where(NewCond().In(column, values...))
+	return b
+}
+
+// WhereNotIn adds a WHERE clause for NOT IN condition (column NOT IN (values...)).
+func (b *DeleteBuilder) WhereNotIn(column string, values ...interface{}) *DeleteBuilder {
+	b.Where(NewCond().NotIn(column, values...))
+	return b
+}
+
+// WhereBetween adds a WHERE clause for BETWEEN condition (column BETWEEN min AND max).
+func (b *DeleteBuilder) WhereBetween(column string, min, max interface{}) *DeleteBuilder {
+	b.Where(NewCond().Between(column, min, max))
+	return b
+}
+
+// WhereNotBetween adds a WHERE clause for NOT BETWEEN condition (column NOT BETWEEN min AND max).
+func (b *DeleteBuilder) WhereNotBetween(column string, min, max interface{}) *DeleteBuilder {
+	b.Where(NewCond().NotBetween(column, min, max))
+	return b
+}
+
+// WhereExists adds a WHERE clause for EXISTS condition (EXISTS (subquery)).
+func (b *DeleteBuilder) WhereExists(subquery interface{}) *DeleteBuilder {
+	b.Where(NewCond().Exists(subquery))
+	return b
+}
+
+// WhereNotExists adds a WHERE clause for NOT EXISTS condition (NOT EXISTS (subquery)).
+func (b *DeleteBuilder) WhereNotExists(subquery interface{}) *DeleteBuilder {
+	b.Where(NewCond().NotExists(subquery))
+	return b
+}
+
+// WhereColsEqual adds a WHERE clause for column equality (column1 = column2).
+func (b *DeleteBuilder) WhereColsEqual(column1, column2 string) *DeleteBuilder {
+	b.Where(Raw(column1 + " = " + column2))
+	return b
+}
+
 // WithDialect sets the dialect for this builder instance.
 func (b *DeleteBuilder) WithDialect(d Dialect) *DeleteBuilder {
 	b.dialect = d

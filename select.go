@@ -70,6 +70,96 @@ func (b *SelectBuilder) WhereNotEqual(column string, value interface{}) *SelectB
 	return b
 }
 
+// WhereNull adds a WHERE clause for NULL check (column IS NULL).
+func (b *SelectBuilder) WhereNull(column string) *SelectBuilder {
+	b.Where(NewCond().IsNull(column))
+	return b
+}
+
+// WhereNotNull adds a WHERE clause for NOT NULL check (column IS NOT NULL).
+func (b *SelectBuilder) WhereNotNull(column string) *SelectBuilder {
+	b.Where(NewCond().IsNotNull(column))
+	return b
+}
+
+// WhereGreaterThan adds a WHERE clause for greater than comparison (column > value).
+func (b *SelectBuilder) WhereGreaterThan(column string, value interface{}) *SelectBuilder {
+	b.Where(NewCond().GreaterThan(column, value))
+	return b
+}
+
+// WhereGreaterThanOrEqual adds a WHERE clause for greater than or equal comparison (column >= value).
+func (b *SelectBuilder) WhereGreaterThanOrEqual(column string, value interface{}) *SelectBuilder {
+	b.Where(NewCond().GreaterThanOrEqual(column, value))
+	return b
+}
+
+// WhereLessThan adds a WHERE clause for less than comparison (column < value).
+func (b *SelectBuilder) WhereLessThan(column string, value interface{}) *SelectBuilder {
+	b.Where(NewCond().LessThan(column, value))
+	return b
+}
+
+// WhereLessThanOrEqual adds a WHERE clause for less than or equal comparison (column <= value).
+func (b *SelectBuilder) WhereLessThanOrEqual(column string, value interface{}) *SelectBuilder {
+	b.Where(NewCond().LessThanOrEqual(column, value))
+	return b
+}
+
+// WhereLike adds a WHERE clause for LIKE pattern matching (column LIKE pattern).
+func (b *SelectBuilder) WhereLike(column string, pattern string) *SelectBuilder {
+	b.Where(NewCond().Like(column, pattern))
+	return b
+}
+
+// WhereNotLike adds a WHERE clause for NOT LIKE pattern matching (column NOT LIKE pattern).
+func (b *SelectBuilder) WhereNotLike(column string, pattern string) *SelectBuilder {
+	b.Where(NewCond().NotLike(column, pattern))
+	return b
+}
+
+// WhereIn adds a WHERE clause for IN condition (column IN (values...)).
+func (b *SelectBuilder) WhereIn(column string, values ...interface{}) *SelectBuilder {
+	b.Where(NewCond().In(column, values...))
+	return b
+}
+
+// WhereNotIn adds a WHERE clause for NOT IN condition (column NOT IN (values...)).
+func (b *SelectBuilder) WhereNotIn(column string, values ...interface{}) *SelectBuilder {
+	b.Where(NewCond().NotIn(column, values...))
+	return b
+}
+
+// WhereBetween adds a WHERE clause for BETWEEN condition (column BETWEEN min AND max).
+func (b *SelectBuilder) WhereBetween(column string, min, max interface{}) *SelectBuilder {
+	b.Where(NewCond().Between(column, min, max))
+	return b
+}
+
+// WhereNotBetween adds a WHERE clause for NOT BETWEEN condition (column NOT BETWEEN min AND max).
+func (b *SelectBuilder) WhereNotBetween(column string, min, max interface{}) *SelectBuilder {
+	b.Where(NewCond().NotBetween(column, min, max))
+	return b
+}
+
+// WhereExists adds a WHERE clause for EXISTS condition (EXISTS (subquery)).
+func (b *SelectBuilder) WhereExists(subquery interface{}) *SelectBuilder {
+	b.Where(NewCond().Exists(subquery))
+	return b
+}
+
+// WhereNotExists adds a WHERE clause for NOT EXISTS condition (NOT EXISTS (subquery)).
+func (b *SelectBuilder) WhereNotExists(subquery interface{}) *SelectBuilder {
+	b.Where(NewCond().NotExists(subquery))
+	return b
+}
+
+// WhereColsEqual adds a WHERE clause for column equality (column1 = column2).
+func (b *SelectBuilder) WhereColsEqual(column1, column2 string) *SelectBuilder {
+	b.Where(Raw(column1 + " = " + column2))
+	return b
+}
+
 // GroupBy adds a GROUP BY clause. Accepts either a column string or Raw.
 func (b *SelectBuilder) GroupBy(expr ...interface{}) *SelectBuilder {
 	if b.whereClause.err != nil || b.tableClauseInterface.err != nil {

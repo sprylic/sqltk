@@ -4,6 +4,7 @@ package sqltk
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/sprylic/sqltk/mysqlfunc"
 	"math/rand"
 	"os"
