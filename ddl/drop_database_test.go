@@ -1,32 +1,31 @@
-package sqltk
+package ddl
 
 import (
 	"testing"
 
-	"github.com/sprylic/sqltk/ddl"
 	"github.com/sprylic/sqltk/shared"
 )
 
 func TestDropDatabase(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.DropDatabaseBuilder
+		builder  *DropDatabaseBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic drop database",
-			builder:  ddl.DropDatabase("testdb"),
+			builder:  DropDatabase("testdb"),
 			expected: "DROP DATABASE `testdb`",
 		},
 		{
 			name:     "drop database with if exists",
-			builder:  ddl.DropDatabase("testdb").IfExists(),
+			builder:  DropDatabase("testdb").IfExists(),
 			expected: "DROP DATABASE IF EXISTS `testdb`",
 		},
 		{
 			name:    "empty database name",
-			builder: ddl.DropDatabase(""),
+			builder: DropDatabase(""),
 			wantErr: true,
 		},
 	}
@@ -62,28 +61,28 @@ func TestDropDatabase(t *testing.T) {
 func TestDropDatabasePostgres(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.DropDatabaseBuilder
+		builder  *DropDatabaseBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic drop database",
-			builder:  ddl.DropDatabase("testdb"),
+			builder:  DropDatabase("testdb"),
 			expected: `DROP DATABASE "testdb"`,
 		},
 		{
 			name:     "drop database with if exists",
-			builder:  ddl.DropDatabase("testdb").IfExists(),
+			builder:  DropDatabase("testdb").IfExists(),
 			expected: `DROP DATABASE IF EXISTS "testdb"`,
 		},
 		{
 			name:     "drop database with cascade",
-			builder:  ddl.DropDatabase("testdb").Cascade(),
+			builder:  DropDatabase("testdb").Cascade(),
 			expected: `DROP DATABASE "testdb" CASCADE`,
 		},
 		{
 			name:     "drop database with if exists and cascade",
-			builder:  ddl.DropDatabase("testdb").IfExists().Cascade(),
+			builder:  DropDatabase("testdb").IfExists().Cascade(),
 			expected: `DROP DATABASE IF EXISTS "testdb" CASCADE`,
 		},
 	}
@@ -119,18 +118,18 @@ func TestDropDatabasePostgres(t *testing.T) {
 func TestDropDatabaseNoQuoteIdent(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.DropDatabaseBuilder
+		builder  *DropDatabaseBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic drop database",
-			builder:  ddl.DropDatabase("testdb"),
+			builder:  DropDatabase("testdb"),
 			expected: "DROP DATABASE testdb",
 		},
 		{
 			name:     "drop database with if exists",
-			builder:  ddl.DropDatabase("testdb").IfExists(),
+			builder:  DropDatabase("testdb").IfExists(),
 			expected: "DROP DATABASE IF EXISTS testdb",
 		},
 	}
@@ -164,7 +163,7 @@ func TestDropDatabaseNoQuoteIdent(t *testing.T) {
 }
 
 func TestDropDatabaseDebugSQL(t *testing.T) {
-	builder := ddl.DropDatabase("testdb").IfExists().Cascade()
+	builder := DropDatabase("testdb").IfExists().Cascade()
 	builder.WithDialect(shared.Postgres())
 
 	debugSQL := builder.DebugSQL()

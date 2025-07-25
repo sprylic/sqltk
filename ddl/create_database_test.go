@@ -1,57 +1,56 @@
-package sqltk
+package ddl
 
 import (
 	"testing"
 
-	"github.com/sprylic/sqltk/ddl"
 	"github.com/sprylic/sqltk/shared"
 )
 
 func TestCreateDatabase(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.CreateDatabaseBuilder
+		builder  *CreateDatabaseBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic create database",
-			builder:  ddl.CreateDatabase("testdb"),
+			builder:  CreateDatabase("testdb"),
 			expected: "CREATE DATABASE `testdb`",
 		},
 		{
 			name:     "create database with if not exists",
-			builder:  ddl.CreateDatabase("testdb").IfNotExists(),
+			builder:  CreateDatabase("testdb").IfNotExists(),
 			expected: "CREATE DATABASE IF NOT EXISTS `testdb`",
 		},
 		{
 			name:     "create database with charset",
-			builder:  ddl.CreateDatabase("testdb").Charset("utf8mb4"),
+			builder:  CreateDatabase("testdb").Charset("utf8mb4"),
 			expected: "CREATE DATABASE `testdb` CHARACTER SET utf8mb4",
 		},
 		{
 			name:     "create database with collation",
-			builder:  ddl.CreateDatabase("testdb").Collation("utf8mb4_unicode_ci"),
+			builder:  CreateDatabase("testdb").Collation("utf8mb4_unicode_ci"),
 			expected: "CREATE DATABASE `testdb` COLLATE utf8mb4_unicode_ci",
 		},
 		{
 			name:     "create database with charset and collation",
-			builder:  ddl.CreateDatabase("testdb").Charset("utf8mb4").Collation("utf8mb4_unicode_ci"),
+			builder:  CreateDatabase("testdb").Charset("utf8mb4").Collation("utf8mb4_unicode_ci"),
 			expected: "CREATE DATABASE `testdb` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
 		},
 		{
 			name:     "create database with custom option",
-			builder:  ddl.CreateDatabase("testdb").Option("ENCRYPTION", "Y"),
+			builder:  CreateDatabase("testdb").Option("ENCRYPTION", "Y"),
 			expected: "CREATE DATABASE `testdb` ENCRYPTION Y",
 		},
 		{
 			name:     "create database with multiple options",
-			builder:  ddl.CreateDatabase("testdb").Option("ENCRYPTION", "Y").Option("READ ONLY", "1"),
+			builder:  CreateDatabase("testdb").Option("ENCRYPTION", "Y").Option("READ ONLY", "1"),
 			expected: "CREATE DATABASE `testdb` ENCRYPTION Y READ ONLY 1",
 		},
 		{
 			name:    "empty database name",
-			builder: ddl.CreateDatabase(""),
+			builder: CreateDatabase(""),
 			wantErr: true,
 		},
 	}
@@ -87,33 +86,33 @@ func TestCreateDatabase(t *testing.T) {
 func TestCreateDatabasePostgres(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.CreateDatabaseBuilder
+		builder  *CreateDatabaseBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic create database",
-			builder:  ddl.CreateDatabase("testdb"),
+			builder:  CreateDatabase("testdb"),
 			expected: `CREATE DATABASE "testdb"`,
 		},
 		{
 			name:     "create database with if not exists",
-			builder:  ddl.CreateDatabase("testdb").IfNotExists(),
+			builder:  CreateDatabase("testdb").IfNotExists(),
 			expected: `CREATE DATABASE IF NOT EXISTS "testdb"`,
 		},
 		{
 			name:     "create database with charset",
-			builder:  ddl.CreateDatabase("testdb").Charset("UTF8"),
+			builder:  CreateDatabase("testdb").Charset("UTF8"),
 			expected: `CREATE DATABASE "testdb" CHARACTER SET UTF8`,
 		},
 		{
 			name:     "create database with collation",
-			builder:  ddl.CreateDatabase("testdb").Collation("en_US.utf8"),
+			builder:  CreateDatabase("testdb").Collation("en_US.utf8"),
 			expected: `CREATE DATABASE "testdb" COLLATE en_US.utf8`,
 		},
 		{
 			name:     "create database with custom option",
-			builder:  ddl.CreateDatabase("testdb").Option("TEMPLATE", "template0"),
+			builder:  CreateDatabase("testdb").Option("TEMPLATE", "template0"),
 			expected: `CREATE DATABASE "testdb" TEMPLATE template0`,
 		},
 	}
@@ -149,23 +148,23 @@ func TestCreateDatabasePostgres(t *testing.T) {
 func TestCreateDatabaseNoQuoteIdent(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.CreateDatabaseBuilder
+		builder  *CreateDatabaseBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic create database",
-			builder:  ddl.CreateDatabase("testdb"),
+			builder:  CreateDatabase("testdb"),
 			expected: "CREATE DATABASE testdb",
 		},
 		{
 			name:     "create database with if not exists",
-			builder:  ddl.CreateDatabase("testdb").IfNotExists(),
+			builder:  CreateDatabase("testdb").IfNotExists(),
 			expected: "CREATE DATABASE IF NOT EXISTS testdb",
 		},
 		{
 			name:     "create database with charset",
-			builder:  ddl.CreateDatabase("testdb").Charset("UTF8"),
+			builder:  CreateDatabase("testdb").Charset("UTF8"),
 			expected: "CREATE DATABASE testdb CHARACTER SET UTF8",
 		},
 	}
@@ -199,7 +198,7 @@ func TestCreateDatabaseNoQuoteIdent(t *testing.T) {
 }
 
 func TestCreateDatabaseDebugSQL(t *testing.T) {
-	builder := ddl.CreateDatabase("testdb").Charset("utf8mb4").Collation("utf8mb4_unicode_ci")
+	builder := CreateDatabase("testdb").Charset("utf8mb4").Collation("utf8mb4_unicode_ci")
 	builder.WithDialect(shared.MySQL())
 
 	debugSQL := builder.DebugSQL()

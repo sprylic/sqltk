@@ -1,52 +1,51 @@
-package sqltk
+package ddl
 
 import (
 	"testing"
 
-	"github.com/sprylic/sqltk/ddl"
 	"github.com/sprylic/sqltk/shared"
 )
 
 func TestDropSchema(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.DropSchemaBuilder
+		builder  *DropSchemaBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic drop schema",
-			builder:  ddl.DropSchema("testschema"),
+			builder:  DropSchema("testschema"),
 			expected: "DROP SCHEMA `testschema`",
 		},
 		{
 			name:     "drop schema with if exists",
-			builder:  ddl.DropSchema("testschema").IfExists(),
+			builder:  DropSchema("testschema").IfExists(),
 			expected: "DROP SCHEMA IF EXISTS `testschema`",
 		},
 		{
 			name:     "drop schema with cascade",
-			builder:  ddl.DropSchema("testschema").Cascade(),
+			builder:  DropSchema("testschema").Cascade(),
 			expected: "DROP SCHEMA `testschema` CASCADE",
 		},
 		{
 			name:     "drop schema with restrict",
-			builder:  ddl.DropSchema("testschema").Restrict(),
+			builder:  DropSchema("testschema").Restrict(),
 			expected: "DROP SCHEMA `testschema` RESTRICT",
 		},
 		{
 			name:     "drop schema with if exists and cascade",
-			builder:  ddl.DropSchema("testschema").IfExists().Cascade(),
+			builder:  DropSchema("testschema").IfExists().Cascade(),
 			expected: "DROP SCHEMA IF EXISTS `testschema` CASCADE",
 		},
 		{
 			name:     "drop schema with if exists and restrict",
-			builder:  ddl.DropSchema("testschema").IfExists().Restrict(),
+			builder:  DropSchema("testschema").IfExists().Restrict(),
 			expected: "DROP SCHEMA IF EXISTS `testschema` RESTRICT",
 		},
 		{
 			name:    "empty schema name",
-			builder: ddl.DropSchema(""),
+			builder: DropSchema(""),
 			wantErr: true,
 		},
 	}
@@ -82,33 +81,33 @@ func TestDropSchema(t *testing.T) {
 func TestDropSchemaPostgres(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.DropSchemaBuilder
+		builder  *DropSchemaBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic drop schema",
-			builder:  ddl.DropSchema("testschema"),
+			builder:  DropSchema("testschema"),
 			expected: `DROP SCHEMA "testschema"`,
 		},
 		{
 			name:     "drop schema with if exists",
-			builder:  ddl.DropSchema("testschema").IfExists(),
+			builder:  DropSchema("testschema").IfExists(),
 			expected: `DROP SCHEMA IF EXISTS "testschema"`,
 		},
 		{
 			name:     "drop schema with cascade",
-			builder:  ddl.DropSchema("testschema").Cascade(),
+			builder:  DropSchema("testschema").Cascade(),
 			expected: `DROP SCHEMA "testschema" CASCADE`,
 		},
 		{
 			name:     "drop schema with restrict",
-			builder:  ddl.DropSchema("testschema").Restrict(),
+			builder:  DropSchema("testschema").Restrict(),
 			expected: `DROP SCHEMA "testschema" RESTRICT`,
 		},
 		{
 			name:     "drop schema with if exists and cascade",
-			builder:  ddl.DropSchema("testschema").IfExists().Cascade(),
+			builder:  DropSchema("testschema").IfExists().Cascade(),
 			expected: `DROP SCHEMA IF EXISTS "testschema" CASCADE`,
 		},
 	}
@@ -144,28 +143,28 @@ func TestDropSchemaPostgres(t *testing.T) {
 func TestDropSchemaNoQuoteIdent(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.DropSchemaBuilder
+		builder  *DropSchemaBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic drop schema",
-			builder:  ddl.DropSchema("testschema"),
+			builder:  DropSchema("testschema"),
 			expected: "DROP SCHEMA testschema",
 		},
 		{
 			name:     "drop schema with if exists",
-			builder:  ddl.DropSchema("testschema").IfExists(),
+			builder:  DropSchema("testschema").IfExists(),
 			expected: "DROP SCHEMA IF EXISTS testschema",
 		},
 		{
 			name:     "drop schema with cascade",
-			builder:  ddl.DropSchema("testschema").Cascade(),
+			builder:  DropSchema("testschema").Cascade(),
 			expected: "DROP SCHEMA testschema CASCADE",
 		},
 		{
 			name:     "drop schema with restrict",
-			builder:  ddl.DropSchema("testschema").Restrict(),
+			builder:  DropSchema("testschema").Restrict(),
 			expected: "DROP SCHEMA testschema RESTRICT",
 		},
 	}
@@ -199,7 +198,7 @@ func TestDropSchemaNoQuoteIdent(t *testing.T) {
 }
 
 func TestDropSchemaDebugSQL(t *testing.T) {
-	builder := ddl.DropSchema("testschema").IfExists().Cascade()
+	builder := DropSchema("testschema").IfExists().Cascade()
 	builder.WithDialect(shared.Postgres())
 
 	debugSQL := builder.DebugSQL()

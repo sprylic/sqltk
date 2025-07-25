@@ -115,7 +115,8 @@ func TestSelectBuilder(t *testing.T) {
 	})
 
 	t.Run("multiple where clauses", func(t *testing.T) {
-		q := Select("id").From("users").WhereEqual("active", true).WhereGreaterThan("age", 18)
+		q := Select("id").From("users").WhereEqual("active", true).
+			WhereGreaterThan("age", 18)
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id FROM users WHERE active = ? AND age > ?"
 		wantArgs := []interface{}{true, 18}
@@ -148,7 +149,8 @@ func TestSelectBuilder_RawWhere(t *testing.T) {
 	})
 
 	t.Run("mixed parameterized and raw", func(t *testing.T) {
-		q := Select("id").From("users").Where(NewCond().Equal("active", true).And(NewCond().Raw("age > 18")))
+		q := Select("id").From("users").Where(NewCond().Equal("active", true).
+			And(NewCond().Raw("age > 18")))
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id FROM users WHERE active = ? AND age > 18"
 		wantArgs := []interface{}{true}
@@ -196,7 +198,8 @@ func TestSelectBuilder_GroupBy_Having_OrderBy(t *testing.T) {
 	})
 
 	t.Run("having parameterized", func(t *testing.T) {
-		q := Select("id").From("users").GroupBy("id").Having(NewCond().GreaterThan("COUNT(*)", 1))
+		q := Select("id").From("users").GroupBy("id").
+			Having(NewCond().GreaterThan("COUNT(*)", 1))
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id FROM users GROUP BY id HAVING COUNT(*) > ?"
 		wantArgs := []interface{}{1}
@@ -305,7 +308,8 @@ func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
 	})
 
 	t.Run("left join fluent", func(t *testing.T) {
-		q := Select("u.id", "p.id").From("users u").LeftJoin("posts p").On("p.user_id", "u.id")
+		q := Select("u.id", "p.id").From("users u").LeftJoin("posts p").
+			On("p.user_id", "u.id")
 		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT u.id, p.id FROM users u LEFT JOIN posts p ON p.user_id = u.id"
 		if err != nil {
@@ -321,7 +325,8 @@ func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
 			Join("posts p").On("p.user_id", "u.id").
 			LeftJoin("comments c").On("c.post_id", "p.id")
 		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT u.id, p.id, c.id FROM users u JOIN posts p ON p.user_id = u.id LEFT JOIN comments c ON c.post_id = p.id"
+		wantSQL := "SELECT u.id, p.id, c.id FROM users u JOIN posts p ON p.user_id = u.id " +
+			"LEFT JOIN comments c ON c.post_id = p.id"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -374,7 +379,8 @@ func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
 			Limit(20).
 			Offset(10)
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT u.id, p.id FROM users u JOIN posts p ON p.user_id = u.id WHERE u.active = ? ORDER BY u.id DESC LIMIT 20 OFFSET 10"
+		wantSQL := "SELECT u.id, p.id FROM users u JOIN posts p ON p.user_id = u.id WHERE u.active = ? " +
+			"ORDER BY u.id DESC LIMIT 20 OFFSET 10"
 		wantArgs := []interface{}{true}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -388,7 +394,8 @@ func TestSelectBuilder_Join_Limit_Offset(t *testing.T) {
 	})
 
 	t.Run("join with alias expr", func(t *testing.T) {
-		q := Select("u.id", "p.id").From(Alias("users", "u")).Join(Alias("posts", "p")).On("p.user_id", "u.id")
+		q := Select("u.id", "p.id").From(Alias("users", "u")).Join(Alias("posts", "p")).
+			On("p.user_id", "u.id")
 		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT u.id, p.id FROM users AS u JOIN posts AS p ON p.user_id = u.id"
 		if err != nil {
@@ -610,8 +617,10 @@ func TestSelectBuilder_Compose(t *testing.T) {
 	})
 
 	t.Run("compose with group by and having", func(t *testing.T) {
-		q1 := Select("user_id", "COUNT(*)").From("orders").GroupBy("user_id").Having(NewCond().GreaterThan("COUNT(*)", 5))
-		q2 := Select("SUM(amount)").From("orders").GroupBy("order_id").Having(NewCond().GreaterThan("SUM(amount)", 1000))
+		q1 := Select("user_id", "COUNT(*)").From("orders").GroupBy("user_id").
+			Having(NewCond().GreaterThan("COUNT(*)", 5))
+		q2 := Select("SUM(amount)").From("orders").GroupBy("order_id").
+			Having(NewCond().GreaterThan("SUM(amount)", 1000))
 
 		q := q1.Compose(q2)
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
@@ -699,7 +708,8 @@ func TestSelectBuilder_Compose(t *testing.T) {
 
 		q := q1.Compose(q2)
 		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT id, (SELECT COUNT(*) FROM posts WHERE user_id = users.id), name, (SELECT MAX(created_at) FROM posts WHERE user_id = users.id) FROM users"
+		wantSQL := "SELECT id, (SELECT COUNT(*) FROM posts WHERE user_id = users.id), name, (SELECT MAX(created_at) " +
+			"FROM posts WHERE user_id = users.id) FROM users"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -726,7 +736,8 @@ func TestSelectBuilder_Compose(t *testing.T) {
 
 func TestSelectBuilder_Dialect(t *testing.T) {
 	t.Run("no quote ident dialect", func(t *testing.T) {
-		q := Select("id", "name").From("users").Where(NewCond().Equal("id", 1).And(NewCond().Equal("name", "bob"))).WithDialect(NoQuoteIdent())
+		q := Select("id", "name").From("users").Where(NewCond().Equal("id", 1).
+			And(NewCond().Equal("name", "bob"))).WithDialect(NoQuoteIdent())
 		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
 		wantSQL := "SELECT id, name FROM users WHERE id = ? AND name = ?"
 		if err != nil {
@@ -738,7 +749,8 @@ func TestSelectBuilder_Dialect(t *testing.T) {
 	})
 
 	t.Run("mysql dialect", func(t *testing.T) {
-		q := Select("id", "name").From("users").Where(NewCond().Equal("id", 1).And(NewCond().Equal("name", "bob"))).WithDialect(MySQL())
+		q := Select("id", "name").From("users").Where(NewCond().Equal("id", 1).
+			And(NewCond().Equal("name", "bob"))).WithDialect(MySQL())
 		sql, _, err := q.WithDialect(MySQL()).Build()
 		wantSQL := "SELECT `id`, `name` FROM `users` WHERE id = ? AND name = ?"
 		if err != nil {
@@ -750,7 +762,8 @@ func TestSelectBuilder_Dialect(t *testing.T) {
 	})
 
 	t.Run("postgres dialect", func(t *testing.T) {
-		q := Select("id", "name").From("users").Where(NewCond().Equal("id", 1).And(NewCond().Equal("name", "bob"))).WithDialect(Postgres())
+		q := Select("id", "name").From("users").Where(NewCond().Equal("id", 1).
+			And(NewCond().Equal("name", "bob"))).WithDialect(Postgres())
 		sql, _, err := q.WithDialect(Postgres()).Build()
 		wantSQL := "SELECT \"id\", \"name\" FROM \"users\" WHERE id = $1 AND name = $2"
 		if err != nil {
@@ -841,7 +854,8 @@ func TestSelectBuilder_GetColumns(t *testing.T) {
 	})
 
 	t.Run("alias columns", func(t *testing.T) {
-		q := Select("id", Alias("name", "user_name"), Alias(Raw("COUNT(*)"), "total")).From("users")
+		q := Select("id", Alias("name", "user_name"), Alias(Raw("COUNT(*)"), "total")).
+			From("users")
 		cols := q.GetColumns()
 		wantCols := []string{"id", "user_name", "total"}
 		if !reflect.DeepEqual(cols, wantCols) {
@@ -862,7 +876,8 @@ func TestSelectBuilder_GetColumns(t *testing.T) {
 
 	t.Run("mixed column types", func(t *testing.T) {
 		sub := Select("COUNT(*)").From("orders")
-		q := Select("id", "name", Raw("MAX(created_at)"), mysqlfunc.Sum("amount"), Alias("email", "user_email"), sub).From("users")
+		q := Select("id", "name", Raw("MAX(created_at)"), mysqlfunc.Sum("amount"), Alias("email", "user_email"), sub).
+			From("users")
 		cols := q.GetColumns()
 		wantCols := []string{"id", "name", "MAX(created_at)", "SUM(amount)", "user_email", "COUNT(*)"}
 		if !reflect.DeepEqual(cols, wantCols) {
@@ -874,15 +889,17 @@ func TestSelectBuilder_GetColumns(t *testing.T) {
 func TestSelectBuilder_ComplexQueries(t *testing.T) {
 	t.Run("complex nested subqueries", func(t *testing.T) {
 		// Subquery in FROM with another subquery in WHERE
-		innerSub := Select("user_id").From("posts").Where(NewCond().GreaterThan("created_at", "2023-01-01"))
-		outerSub := Select("id", "name").From("users").Where(NewCond().In("id", innerSub))
+		innerSub := Select("user_id").From("posts").WhereGreaterThan("created_at", "2023-01-01")
+		outerSub := Select("id", "name").From("users").WhereIn("id", innerSub)
 
 		q := Select("u.id", "u.name", "p.title").From("users u").
 			Join(Alias(outerSub, "active_users")).On("active_users.id", "u.id").
 			LeftJoin("posts p").On("p.user_id", "u.id")
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT u.id, u.name, p.title FROM users u JOIN (SELECT id, name FROM users WHERE id IN ((SELECT user_id FROM posts WHERE created_at > ?))) AS active_users ON active_users.id = u.id LEFT JOIN posts p ON p.user_id = u.id"
+		wantSQL := "SELECT u.id, u.name, p.title FROM users u JOIN (SELECT id, name FROM users WHERE id IN (" +
+			"(SELECT user_id FROM posts WHERE created_at > ?))" +
+			") AS active_users ON active_users.id = u.id LEFT JOIN posts p ON p.user_id = u.id"
 		wantArgs := []interface{}{"2023-01-01"}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -906,7 +923,8 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 			Where(NewCond().GreaterThan("pay.amount", 100))
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT u.id, u.name, o.id, p.title FROM users u JOIN orders o ON o.user_id = u.id LEFT JOIN posts p ON p.user_id = u.id RIGHT JOIN payments pay ON pay.order_id = o.id WHERE u.active = ? AND o.status = ? AND pay.amount > ?"
+		wantSQL := "SELECT u.id, u.name, o.id, p.title FROM users u JOIN orders o ON o.user_id = u.id LEFT JOIN posts p " +
+			"ON p.user_id = u.id RIGHT JOIN payments pay ON pay.order_id = o.id WHERE u.active = ? AND o.status = ? AND pay.amount > ?"
 		wantArgs := []interface{}{true, "completed", 100}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -938,7 +956,9 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 			OrderBy("total_amount DESC")
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT user_id, category, COUNT(*) AS total_orders, SUM(amount) AS total_amount, AVG(amount) AS avg_amount, MAX(amount) AS max_amount, MIN(created_at) AS first_order, MAX(created_at) AS last_order FROM orders WHERE status = ? GROUP BY user_id, category HAVING COUNT(*) > ? AND SUM(amount) > ? ORDER BY total_amount DESC"
+		wantSQL := "SELECT user_id, category, COUNT(*) AS total_orders, SUM(amount) AS total_amount, AVG(amount) " +
+			"AS avg_amount, MAX(amount) AS max_amount, MIN(created_at) AS first_order, MAX(created_at) AS last_order " +
+			"FROM orders WHERE status = ? GROUP BY user_id, category HAVING COUNT(*) > ? AND SUM(amount) > ? ORDER BY total_amount DESC"
 		wantArgs := []interface{}{"completed", 5, 1000}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -962,7 +982,8 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 			Where(NewCond().Exists(existsSub))
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT u.id, u.name FROM users u WHERE u.active = ? AND EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id AND o.amount > ? AND o.created_at > DATE_SUB(NOW(), INTERVAL 30 DAY))"
+		wantSQL := "SELECT u.id, u.name FROM users u WHERE u.active = ? AND EXISTS (SELECT 1 FROM orders o " +
+			"WHERE o.user_id = u.id AND o.amount > ? AND o.created_at > DATE_SUB(NOW(), INTERVAL 30 DAY))"
 		wantArgs := []interface{}{true, 1000}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -989,7 +1010,8 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 			WhereEqual("u.active", true)
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT u.id, u.name, o.amount, o.period FROM users u JOIN (SELECT user_id, amount, 'recent' AS period FROM orders WHERE created_at > ?) AS o ON o.user_id = u.id WHERE u.active = ?"
+		wantSQL := "SELECT u.id, u.name, o.amount, o.period FROM users u JOIN (SELECT user_id, amount, 'recent' AS period " +
+			"FROM orders WHERE created_at > ?) AS o ON o.user_id = u.id WHERE u.active = ?"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1003,8 +1025,10 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 	})
 
 	t.Run("complex nested aliases", func(t *testing.T) {
-		sub1 := Select("user_id", Alias(mysqlfunc.Count("*"), "post_count")).From("posts").GroupBy("user_id")
-		sub2 := Select("user_id", Alias(mysqlfunc.Sum("amount"), "total_spent")).From("orders").GroupBy("user_id")
+		sub1 := Select("user_id", Alias(mysqlfunc.Count("*"), "post_count")).
+			From("posts").GroupBy("user_id")
+		sub2 := Select("user_id", Alias(mysqlfunc.Sum("amount"), "total_spent")).
+			From("orders").GroupBy("user_id")
 
 		q := Select(
 			"u.id",
@@ -1016,7 +1040,10 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 			LeftJoin(Alias(sub2, "os")).On("os.user_id", "u.id")
 
 		sql, _, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT u.id, u.name, (SELECT user_id, COUNT(*) AS post_count FROM posts GROUP BY user_id) AS post_stats, (SELECT user_id, SUM(amount) AS total_spent FROM orders GROUP BY user_id) AS order_stats FROM users u LEFT JOIN (SELECT user_id, COUNT(*) AS post_count FROM posts GROUP BY user_id) AS ps ON ps.user_id = u.id LEFT JOIN (SELECT user_id, SUM(amount) AS total_spent FROM orders GROUP BY user_id) AS os ON os.user_id = u.id"
+		wantSQL := "SELECT u.id, u.name, (SELECT user_id, COUNT(*) AS post_count FROM posts GROUP BY user_id) AS post_stats, (" +
+			"SELECT user_id, SUM(amount) AS total_spent FROM orders GROUP BY user_id) AS order_stats FROM users u LEFT JOIN (" +
+			"SELECT user_id, COUNT(*) AS post_count FROM posts GROUP BY user_id) AS ps ON ps.user_id = u.id LEFT JOIN (" +
+			"SELECT user_id, SUM(amount) AS total_spent FROM orders GROUP BY user_id) AS os ON os.user_id = u.id"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1036,7 +1063,9 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 			WhereEqual("post.status", "published")
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT u.id, u.name, p.title, c.content FROM users u JOIN profiles p ON p.user_id = u.id LEFT JOIN posts post ON post.user_id = u.id RIGHT JOIN comments c ON c.post_id = post.id FULL JOIN tags t ON t.post_id = post.id WHERE u.active = ? AND post.status = ?"
+		wantSQL := "SELECT u.id, u.name, p.title, c.content FROM users u JOIN profiles p ON p.user_id = u.id " +
+			"LEFT JOIN posts post ON post.user_id = u.id RIGHT JOIN comments c ON c.post_id = post.id " +
+			"FULL JOIN tags t ON t.post_id = post.id WHERE u.active = ? AND post.status = ?"
 		wantArgs := []interface{}{true, "published"}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -1061,7 +1090,8 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 			Where(NewCond().In("id", sub))
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT id, name, email FROM users WHERE active = ? AND id IN ((SELECT user_id FROM orders WHERE amount > ? AND status = ? GROUP BY user_id HAVING COUNT(*) > ?))"
+		wantSQL := "SELECT id, name, email FROM users WHERE active = ? AND id IN ((SELECT user_id FROM orders " +
+			"WHERE amount > ? AND status = ? GROUP BY user_id HAVING COUNT(*) > ?))"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1085,7 +1115,8 @@ func TestSelectBuilder_ComplexQueries(t *testing.T) {
 			Offset(5)
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT id, name, created_at, last_login FROM users WHERE active = ? ORDER BY created_at DESC, last_login ASC, name LIMIT 10 OFFSET 5"
+		wantSQL := "SELECT id, name, created_at, last_login FROM users WHERE active = ? " +
+			"ORDER BY created_at DESC, last_login ASC, name LIMIT 10 OFFSET 5"
 		wantArgs := []interface{}{true}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -1219,7 +1250,8 @@ func TestSelectBuilder_ConvenienceWhereMethods(t *testing.T) {
 			WhereExists(sub1).
 			WhereNotExists(sub2)
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT id FROM users WHERE EXISTS (SELECT 1 FROM orders WHERE user_id = users.id) AND NOT EXISTS (SELECT 1 FROM posts WHERE user_id = users.id)"
+		wantSQL := "SELECT id FROM users WHERE EXISTS (SELECT 1 FROM orders WHERE user_id = users.id) AND " +
+			"NOT EXISTS (SELECT 1 FROM posts WHERE user_id = users.id)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1257,7 +1289,8 @@ func TestSelectBuilder_ConvenienceWhereMethods(t *testing.T) {
 			WhereBetween("score", 70, 100)
 
 		sql, args, err := q.WithDialect(NoQuoteIdent()).Build()
-		wantSQL := "SELECT id, name, email FROM users WHERE active = ? AND email IS NOT NULL AND age > ? AND age < ? AND status IN (?, ?) AND name LIKE ? AND score BETWEEN ? AND ?"
+		wantSQL := "SELECT id, name, email FROM users WHERE active = ? AND email IS NOT NULL AND age > ? " +
+			"AND age < ? AND status IN (?, ?) AND name LIKE ? AND score BETWEEN ? AND ?"
 		wantArgs := []interface{}{true, 18, 65, "active", "pending", "%john%", 70, 100}
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

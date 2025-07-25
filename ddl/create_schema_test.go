@@ -1,52 +1,51 @@
-package sqltk
+package ddl
 
 import (
 	"testing"
 
-	"github.com/sprylic/sqltk/ddl"
 	"github.com/sprylic/sqltk/shared"
 )
 
 func TestCreateSchema(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.CreateSchemaBuilder
+		builder  *CreateSchemaBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic create schema",
-			builder:  ddl.CreateSchema("testschema"),
+			builder:  CreateSchema("testschema"),
 			expected: "CREATE SCHEMA `testschema`",
 		},
 		{
 			name:     "create schema with if not exists",
-			builder:  ddl.CreateSchema("testschema").IfNotExists(),
+			builder:  CreateSchema("testschema").IfNotExists(),
 			expected: "CREATE SCHEMA IF NOT EXISTS `testschema`",
 		},
 		{
 			name:     "create schema with authorization",
-			builder:  ddl.CreateSchema("testschema").Authorization("testuser"),
+			builder:  CreateSchema("testschema").Authorization("testuser"),
 			expected: "CREATE SCHEMA `testschema` AUTHORIZATION `testuser`",
 		},
 		{
 			name:     "create schema with if not exists and authorization",
-			builder:  ddl.CreateSchema("testschema").IfNotExists().Authorization("testuser"),
+			builder:  CreateSchema("testschema").IfNotExists().Authorization("testuser"),
 			expected: "CREATE SCHEMA IF NOT EXISTS `testschema` AUTHORIZATION `testuser`",
 		},
 		{
 			name:     "create schema with custom option",
-			builder:  ddl.CreateSchema("testschema").Option("DEFAULT_CHARACTER_SET", "utf8mb4"),
+			builder:  CreateSchema("testschema").Option("DEFAULT_CHARACTER_SET", "utf8mb4"),
 			expected: "CREATE SCHEMA `testschema` DEFAULT_CHARACTER_SET utf8mb4",
 		},
 		{
 			name:     "create schema with multiple options",
-			builder:  ddl.CreateSchema("testschema").Option("DEFAULT_CHARACTER_SET", "utf8mb4").Option("DEFAULT_COLLATION", "utf8mb4_unicode_ci"),
+			builder:  CreateSchema("testschema").Option("DEFAULT_CHARACTER_SET", "utf8mb4").Option("DEFAULT_COLLATION", "utf8mb4_unicode_ci"),
 			expected: "CREATE SCHEMA `testschema` DEFAULT_CHARACTER_SET utf8mb4 DEFAULT_COLLATION utf8mb4_unicode_ci",
 		},
 		{
 			name:    "empty schema name",
-			builder: ddl.CreateSchema(""),
+			builder: CreateSchema(""),
 			wantErr: true,
 		},
 	}
@@ -82,28 +81,28 @@ func TestCreateSchema(t *testing.T) {
 func TestCreateSchemaPostgres(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.CreateSchemaBuilder
+		builder  *CreateSchemaBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic create schema",
-			builder:  ddl.CreateSchema("testschema"),
+			builder:  CreateSchema("testschema"),
 			expected: `CREATE SCHEMA "testschema"`,
 		},
 		{
 			name:     "create schema with if not exists",
-			builder:  ddl.CreateSchema("testschema").IfNotExists(),
+			builder:  CreateSchema("testschema").IfNotExists(),
 			expected: `CREATE SCHEMA IF NOT EXISTS "testschema"`,
 		},
 		{
 			name:     "create schema with authorization",
-			builder:  ddl.CreateSchema("testschema").Authorization("testuser"),
+			builder:  CreateSchema("testschema").Authorization("testuser"),
 			expected: `CREATE SCHEMA "testschema" AUTHORIZATION "testuser"`,
 		},
 		{
 			name:     "create schema with custom option",
-			builder:  ddl.CreateSchema("testschema").Option("QUOTA", "100MB"),
+			builder:  CreateSchema("testschema").Option("QUOTA", "100MB"),
 			expected: `CREATE SCHEMA "testschema" QUOTA 100MB`,
 		},
 	}
@@ -139,23 +138,23 @@ func TestCreateSchemaPostgres(t *testing.T) {
 func TestCreateSchemaNoQuoteIdent(t *testing.T) {
 	tests := []struct {
 		name     string
-		builder  *ddl.CreateSchemaBuilder
+		builder  *CreateSchemaBuilder
 		expected string
 		wantErr  bool
 	}{
 		{
 			name:     "basic create schema",
-			builder:  ddl.CreateSchema("testschema"),
+			builder:  CreateSchema("testschema"),
 			expected: "CREATE SCHEMA testschema",
 		},
 		{
 			name:     "create schema with if not exists",
-			builder:  ddl.CreateSchema("testschema").IfNotExists(),
+			builder:  CreateSchema("testschema").IfNotExists(),
 			expected: "CREATE SCHEMA IF NOT EXISTS testschema",
 		},
 		{
 			name:     "create schema with authorization",
-			builder:  ddl.CreateSchema("testschema").Authorization("testuser"),
+			builder:  CreateSchema("testschema").Authorization("testuser"),
 			expected: "CREATE SCHEMA testschema AUTHORIZATION testuser",
 		},
 	}
@@ -189,7 +188,7 @@ func TestCreateSchemaNoQuoteIdent(t *testing.T) {
 }
 
 func TestCreateSchemaDebugSQL(t *testing.T) {
-	builder := ddl.CreateSchema("testschema").IfNotExists().Authorization("testuser")
+	builder := CreateSchema("testschema").IfNotExists().Authorization("testuser")
 	builder.WithDialect(shared.MySQL())
 
 	debugSQL := builder.DebugSQL()
