@@ -1,6 +1,8 @@
 package sqltk
 
 import (
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 	"testing"
 
 	"github.com/sprylic/sqltk/mysqlfunc"
@@ -8,7 +10,7 @@ import (
 )
 
 func init() {
-	SetDialect(NoQuoteIdent())
+	sqldialect.SetDialect(sqldialect.NoQuoteIdent())
 }
 
 func TestMySQLFunctions(t *testing.T) {
@@ -336,7 +338,7 @@ func TestFunctionWithWhereClause(t *testing.T) {
 	t.Run("mysql function in where clause", func(t *testing.T) {
 		// Test using MySQL function in WHERE clause
 		q := Select("id", "name").From("users").Where(
-			AsCondition(Raw("created_at > " + string(mysqlfunc.CurrentTimestamp()))),
+			raw.Cond("created_at > " + string(mysqlfunc.CurrentTimestamp())),
 		)
 
 		sql, args, err := q.Build()
@@ -356,7 +358,7 @@ func TestFunctionWithWhereClause(t *testing.T) {
 	t.Run("postgres function in where clause", func(t *testing.T) {
 		// Test using PostgreSQL function in WHERE clause
 		q := Select("id", "name").From("users").Where(
-			AsCondition(Raw("created_at > " + string(pgfunc.Now()))),
+			raw.Cond("created_at > " + string(pgfunc.Now())),
 		)
 
 		sql, args, err := q.Build()

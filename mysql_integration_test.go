@@ -5,6 +5,8 @@ package sqltk
 import (
 	"database/sql"
 	"github.com/sprylic/sqltk/mysqlfunc"
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 	"math/rand"
 	"os"
 	"strings"
@@ -42,7 +44,7 @@ func TestMySQLIntegration(t *testing.T) {
 
 	// Create test database
 	createDB := ddl.CreateDatabase(testDBName).IfNotExists().Charset("utf8mb4").Collation("utf8mb4_unicode_ci")
-	sqlStr, _, err := createDB.WithDialect(MySQL()).Build()
+	sqlStr, _, err := createDB.WithDialect(sqldialect.MySQL()).Build()
 	if err != nil {
 		t.Fatalf("create database build: %v", err)
 	}
@@ -73,7 +75,7 @@ func TestMySQLIntegration(t *testing.T) {
 	defer func() {
 		testDB.Close()
 		dropDB := ddl.DropDatabase(testDBName).IfExists()
-		sqlStr, _, _ := dropDB.WithDialect(MySQL()).Build()
+		sqlStr, _, _ := dropDB.WithDialect(sqldialect.MySQL()).Build()
 		_, _ = db.Exec(sqlStr)
 	}()
 
@@ -107,14 +109,14 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 			AddColumn(ddl.Column("name").Type("VARCHAR").Size(255).NotNull()).
 			AddColumn(ddl.Column("email").Type("VARCHAR").Size(255)).
 			AddColumn(ddl.Column("age").Type("INT")).
-			AddColumn(ddl.Column("created_at").Type("TIMESTAMP").Default(Raw("CURRENT_TIMESTAMP")).NotNull()).
+			AddColumn(ddl.Column("created_at").Type("TIMESTAMP").Default(raw.Raw("CURRENT_TIMESTAMP")).NotNull()).
 			Unique("idx_email", "email").
 			Check("chk_age", "age >= 0").
 			Engine("InnoDB").
 			Charset("utf8mb4").
 			Collation("utf8mb4_unicode_ci")
 
-		sqlStr, args, err := q.WithDialect(MySQL()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.MySQL()).Build()
 		if err != nil {
 			t.Fatalf("create table build: %v", err)
 		}
@@ -127,7 +129,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 	// Test CREATE INDEX
 	t.Run("Create Index", func(t *testing.T) {
 		q := ddl.CreateIndex("idx_users_name", "users").Columns("name")
-		sqlStr, args, err := q.WithDialect(MySQL()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.MySQL()).Build()
 		if err != nil {
 			t.Fatalf("create index build: %v", err)
 		}
@@ -141,7 +143,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 	t.Run("Create View", func(t *testing.T) {
 		subq := Select("name", "COUNT(*) as count").From("users").GroupBy("name")
 		q := ddl.CreateView("user_stats").As(subq)
-		sqlStr, args, err := q.WithDialect(MySQL()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.MySQL()).Build()
 		if err != nil {
 			t.Fatalf("create view build: %v", err)
 		}
@@ -164,7 +166,7 @@ func testMySQLDDL(t *testing.T, db *sql.DB) {
 			ddl.NewConstraint().
 				Unique("idx_name_age", "name", "age"),
 		)
-		sqlStr, args, err := q.WithDialect(MySQL()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.MySQL()).Build()
 		if err != nil {
 			t.Fatalf("alter table build: %v", err)
 		}
@@ -180,7 +182,7 @@ func testMySQLCRUD(t *testing.T, db *sql.DB) {
 	t.Run("Basic CRUD", func(t *testing.T) {
 		// Insert
 		q := Insert("users").Columns("name", "email", "age").Values("Bob", "bob@example.com", 25)
-		sqlStr, args, err := q.WithDialect(MySQL()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.MySQL()).Build()
 		if err != nil {
 			t.Fatalf("insert build: %v", err)
 		}
@@ -193,7 +195,7 @@ func testMySQLCRUD(t *testing.T, db *sql.DB) {
 		// Select
 		q2 := Select("id", "name", "email").From("users").
 			Where(NewCond().Where("id", "=", insertID))
-		sqlStr, args, err = q2.WithDialect(MySQL()).Build()
+		sqlStr, args, err = q2.WithDialect(sqldialect.MySQL()).Build()
 		if err != nil {
 			t.Fatalf("select build: %v", err)
 		}
@@ -209,7 +211,7 @@ func testMySQLCRUD(t *testing.T, db *sql.DB) {
 
 		// Update
 		q3 := Update("users").Set("age", 26).Where(NewCond().Equal("id", insertID))
-		sqlStr, args, err = q3.WithDialect(MySQL()).Build()
+		sqlStr, args, err = q3.WithDialect(sqldialect.MySQL()).Build()
 		if err != nil {
 			t.Fatalf("update build: %v", err)
 		}
@@ -220,7 +222,7 @@ func testMySQLCRUD(t *testing.T, db *sql.DB) {
 
 		// Delete
 		q4 := Delete("users").Where(NewStringCondition("id = ?", insertID))
-		sqlStr, args, err = q4.WithDialect(MySQL()).Build()
+		sqlStr, args, err = q4.WithDialect(sqldialect.MySQL()).Build()
 		if err != nil {
 			t.Fatalf("delete build: %v", err)
 		}
@@ -242,10 +244,10 @@ func testMySQLAdvanced(t *testing.T, db *sql.DB) {
 
 		// TODO: Update to use new methods
 		// Complex query with subquery and aggregation
-		subq := Select(Raw("AVG(age)")).From("users")
-		subSQL, _, _ := subq.WithDialect(MySQL()).Build()
-		q := Select("name", "age").From("users").Where(Raw("age > (" + subSQL + ")"))
-		sqlStr, args, err := q.WithDialect(MySQL()).Build()
+		subq := Select(raw.Raw("AVG(age)")).From("users")
+		subSQL, _, _ := subq.WithDialect(sqldialect.MySQL()).Build()
+		q := Select("name", "age").From("users").Where(raw.Raw("age > (" + subSQL + ")"))
+		sqlStr, args, err := q.WithDialect(sqldialect.MySQL()).Build()
 		if err != nil {
 			t.Fatalf("complex select build: %v", err)
 		}

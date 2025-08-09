@@ -3,13 +3,17 @@ package sqltk
 import (
 	"errors"
 	"strings"
+
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldebug"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // DeleteBuilder builds SQL DELETE queries.
 type DeleteBuilder struct {
 	tableClauseString
 	whereClause
-	dialect Dialect // per-builder dialect, if set
+	dialect sqldialect.Dialect // per-builder dialect, if set
 }
 
 // Delete creates a new DeleteBuilder for the given table.
@@ -123,12 +127,12 @@ func (b *DeleteBuilder) WhereNotExists(subquery interface{}) *DeleteBuilder {
 
 // WhereColsEqual adds a WHERE clause for column equality (column1 = column2).
 func (b *DeleteBuilder) WhereColsEqual(column1, column2 string) *DeleteBuilder {
-	b.Where(Raw(column1 + " = " + column2))
+	b.Where(raw.Raw(column1 + " = " + column2))
 	return b
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *DeleteBuilder) WithDialect(d Dialect) *DeleteBuilder {
+func (b *DeleteBuilder) WithDialect(d sqldialect.Dialect) *DeleteBuilder {
 	b.dialect = d
 	return b
 }
@@ -147,7 +151,7 @@ func (b *DeleteBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = GetDialect()
+		dialect = sqldialect.GetDialect()
 	}
 	placeholderIdx := 1
 
@@ -204,5 +208,5 @@ func (b *PostgresDeleteBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *DeleteBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

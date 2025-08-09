@@ -2,9 +2,10 @@ package ddl
 
 import (
 	"errors"
+	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // DropSchemaBuilder builds DROP SCHEMA statements.
@@ -14,7 +15,7 @@ type DropSchemaBuilder struct {
 	cascade  bool
 	restrict bool
 	err      error
-	dialect  shared.Dialect
+	dialect  sqldialect.Dialect
 }
 
 // DropSchema creates a new DropSchemaBuilder for the given schema name.
@@ -55,7 +56,7 @@ func (b *DropSchemaBuilder) Restrict() *DropSchemaBuilder {
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *DropSchemaBuilder) WithDialect(d shared.Dialect) *DropSchemaBuilder {
+func (b *DropSchemaBuilder) WithDialect(d sqldialect.Dialect) *DropSchemaBuilder {
 	b.dialect = d
 	return b
 }
@@ -71,7 +72,7 @@ func (b *DropSchemaBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = shared.GetDialect()
+		dialect = sqldialect.GetDialect()
 	}
 
 	var parts []string
@@ -98,5 +99,5 @@ func (b *DropSchemaBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *DropSchemaBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

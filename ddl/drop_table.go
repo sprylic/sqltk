@@ -2,9 +2,10 @@ package ddl
 
 import (
 	"errors"
+	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // DropTableBuilder builds SQL DROP TABLE queries.
@@ -14,7 +15,7 @@ type DropTableBuilder struct {
 	cascade    bool
 	restrict   bool
 	err        error
-	dialect    shared.Dialect
+	dialect    sqldialect.Dialect
 }
 
 // DropTable creates a new DropTableBuilder for the given table(s).
@@ -62,7 +63,7 @@ func (b *DropTableBuilder) Restrict() *DropTableBuilder {
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *DropTableBuilder) WithDialect(d shared.Dialect) *DropTableBuilder {
+func (b *DropTableBuilder) WithDialect(d sqldialect.Dialect) *DropTableBuilder {
 	if b.err != nil {
 		return b
 	}
@@ -81,7 +82,7 @@ func (b *DropTableBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = shared.GetDialect() // Use global dialect instead of defaulting to MySQL
+		dialect = sqldialect.GetDialect() // Use global dialect instead of defaulting to MySQL
 	}
 
 	var sb strings.Builder
@@ -114,5 +115,5 @@ func (b *DropTableBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *DropTableBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

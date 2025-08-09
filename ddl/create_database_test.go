@@ -3,7 +3,7 @@ package ddl
 import (
 	"testing"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 func TestCreateDatabase(t *testing.T) {
@@ -57,7 +57,7 @@ func TestCreateDatabase(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.MySQL())
+			tt.builder.WithDialect(sqldialect.MySQL())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -119,7 +119,7 @@ func TestCreateDatabasePostgres(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.Postgres())
+			tt.builder.WithDialect(sqldialect.Postgres())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -171,7 +171,7 @@ func TestCreateDatabaseNoQuoteIdent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.NoQuoteIdent())
+			tt.builder.WithDialect(sqldialect.NoQuoteIdent())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -199,7 +199,7 @@ func TestCreateDatabaseNoQuoteIdent(t *testing.T) {
 
 func TestCreateDatabaseDebugSQL(t *testing.T) {
 	builder := CreateDatabase("testdb").Charset("utf8mb4").Collation("utf8mb4_unicode_ci")
-	builder.WithDialect(shared.MySQL())
+	builder.WithDialect(sqldialect.MySQL())
 
 	debugSQL := builder.DebugSQL()
 	expected := "CREATE DATABASE `testdb` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"

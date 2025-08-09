@@ -2,9 +2,10 @@ package ddl
 
 import (
 	"errors"
+	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // CreateIndexBuilder builds SQL CREATE INDEX queries.
@@ -15,7 +16,7 @@ type CreateIndexBuilder struct {
 	unique      bool
 	ifNotExists bool
 	err         error
-	dialect     shared.Dialect
+	dialect     sqldialect.Dialect
 }
 
 // CreateIndex creates a new CreateIndexBuilder for the given index and table.
@@ -71,7 +72,7 @@ func (b *CreateIndexBuilder) IfNotExists() *CreateIndexBuilder {
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *CreateIndexBuilder) WithDialect(d shared.Dialect) *CreateIndexBuilder {
+func (b *CreateIndexBuilder) WithDialect(d sqldialect.Dialect) *CreateIndexBuilder {
 	if b.err != nil {
 		return b
 	}
@@ -96,7 +97,7 @@ func (b *CreateIndexBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = shared.GetDialect() // Use global dialect instead of defaulting to MySQL
+		dialect = sqldialect.GetDialect() // Use global dialect instead of defaulting to MySQL
 	}
 
 	var sb strings.Builder
@@ -131,5 +132,5 @@ func (b *CreateIndexBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *CreateIndexBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

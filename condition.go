@@ -3,6 +3,10 @@ package sqltk
 import (
 	"fmt"
 	"strings"
+
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldebug"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // Condition represents a SQL condition that can be used in WHERE or HAVING clauses.
@@ -30,32 +34,12 @@ func (sc *StringCondition) BuildCondition() (string, []interface{}, error) {
 	return sc.SQL, sc.Args, nil
 }
 
-// RawCondition wraps a Raw SQL condition for type safety.
-type RawCondition struct {
-	SQL Raw
-}
-
-// NewRawCondition creates a new RawCondition from Raw SQL.
-func NewRawCondition(sql Raw) *RawCondition {
-	return &RawCondition{SQL: sql}
-}
-
-// AsCondition converts a Raw to a Condition for use in Where/Having clauses.
-func AsCondition(r Raw) Condition {
-	return &RawCondition{SQL: r}
-}
-
-// BuildCondition implements the Condition interface.
-func (rc *RawCondition) BuildCondition() (string, []interface{}, error) {
-	return string(rc.SQL), nil, nil
-}
-
 // ConditionBuilder provides a fluent API for building SQL conditions.
 type ConditionBuilder struct {
 	parts   []string
 	args    []interface{}
 	err     error
-	dialect Dialect
+	dialect sqldialect.Dialect
 }
 
 // BuildCondition implements the Condition interface.
@@ -69,17 +53,17 @@ func NewCond() *ConditionBuilder {
 }
 
 // WithDialect sets the dialect for this condition builder.
-func (c *ConditionBuilder) WithDialect(d Dialect) *ConditionBuilder {
+func (c *ConditionBuilder) WithDialect(d sqldialect.Dialect) *ConditionBuilder {
 	c.dialect = d
 	return c
 }
 
 // getDialect returns the dialect, using global if not set.
-func (c *ConditionBuilder) getDialect() Dialect {
+func (c *ConditionBuilder) getDialect() sqldialect.Dialect {
 	if c.dialect != nil {
 		return c.dialect
 	}
-	return GetDialect()
+	return sqldialect.GetDialect()
 }
 
 // Where adds a simple WHERE condition.
@@ -419,10 +403,10 @@ func (c *ConditionBuilder) Exists(subquery interface{}) *ConditionBuilder {
 			c.err = fmt.Errorf("exists subquery error: %w", err)
 			return c
 		}
-	case Raw:
+	case raw.Raw:
 		sql = string(sq)
 	default:
-		c.err = fmt.Errorf("exists: subquery must be *SelectBuilder or Raw (got %T)", subquery)
+		c.err = fmt.Errorf("exists: subquery must be *SelectBuilder or raw.Raw (got %T)", subquery)
 		return c
 	}
 
@@ -448,10 +432,10 @@ func (c *ConditionBuilder) NotExists(subquery interface{}) *ConditionBuilder {
 			c.err = fmt.Errorf("not exists subquery error: %w", err)
 			return c
 		}
-	case Raw:
+	case raw.Raw:
 		sql = string(sq)
 	default:
-		c.err = fmt.Errorf("not exists: subquery must be *SelectBuilder or Raw (got %T)", subquery)
+		c.err = fmt.Errorf("not exists: subquery must be *SelectBuilder or raw.Raw (got %T)", subquery)
 		return c
 	}
 
@@ -550,7 +534,7 @@ func (c *ConditionBuilder) GetUnsafeString() string {
 	if len(args) == 0 {
 		return sql
 	}
-	return InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }
 
 // CaseBuilder provides a fluent API for building CASE WHEN expressions.
@@ -580,12 +564,12 @@ func (cb *CaseBuilder) When(condition interface{}, result interface{}) *CaseBuil
 			cb.err = fmt.Errorf("case when condition error: %w", err)
 			return cb
 		}
-	case Raw:
+	case raw.Raw:
 		condSQL = string(c)
 	case string:
 		condSQL = c
 	default:
-		cb.err = fmt.Errorf("case when: condition must be *ConditionBuilder, Raw, or string (got %T)", condition)
+		cb.err = fmt.Errorf("case when: condition must be *ConditionBuilder, raw.Raw, or string (got %T)", condition)
 		return cb
 	}
 

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // whereClause holds shared WHERE clause logic for builders.
@@ -46,7 +48,7 @@ func (w *whereClause) WhereNotEqual(column string, value interface{}) {
 	w.Where(NewStringCondition(column+" != ?", value))
 }
 
-func (w *whereClause) buildWhereSQL(dialect Dialect, placeholderIdx *int) (string, []interface{}) {
+func (w *whereClause) buildWhereSQL(dialect sqldialect.Dialect, placeholderIdx *int) (string, []interface{}) {
 	var wheres []string
 	if len(w.whereParam) > 0 {
 		wheres = append(wheres, w.whereParam...)

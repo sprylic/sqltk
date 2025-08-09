@@ -1,7 +1,8 @@
 package ddl
 
 import (
-	"github.com/sprylic/sqltk"
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 	"strings"
 	"testing"
 
@@ -10,11 +11,11 @@ import (
 
 func TestCreateTableBuilder(t *testing.T) {
 	t.Run("basic create table", func(t *testing.T) {
-		q := CreateTable("users").WithDialect(sqltk.NoQuoteIdent()).
+		q := CreateTable("users").WithDialect(sqldialect.NoQuoteIdent()).
 			AddColumn(Column("id").Type("INT").NotNull()).
 			AddColumn(Column("name").Type("VARCHAR").Size(255).NotNull())
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL, name VARCHAR(255) NOT NULL)"
 
 		if err != nil {
@@ -33,7 +34,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			IfNotExists().
 			AddColumn(Column("id").Type("INT").NotNull())
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE IF NOT EXISTS users (id INT NOT NULL)"
 
 		if err != nil {
@@ -52,7 +53,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			Temporary().
 			AddColumn(Column("id").Type("INT").NotNull())
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TEMPORARY TABLE temp_users (id INT NOT NULL)"
 
 		if err != nil {
@@ -72,7 +73,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			AddColumn(Column("name").Type("VARCHAR").Size(255)).
 			PrimaryKey("id")
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL, name VARCHAR(255), PRIMARY KEY (id))"
 
 		if err != nil {
@@ -91,7 +92,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			AddColumn(Column("id").Type("INT").NotNull().PrimaryKey()).
 			AddColumn(Column("name").Type("VARCHAR").Size(255))
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL, name VARCHAR(255), PRIMARY KEY (id))"
 
 		if err != nil {
@@ -110,7 +111,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			AddColumn(Column("user_id").Type("INT").NotNull().PrimaryKey()).
 			AddColumn(Column("role_id").Type("INT").NotNull().PrimaryKey())
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE user_roles (user_id INT NOT NULL, role_id INT NOT NULL, PRIMARY KEY (user_id, role_id))"
 
 		if err != nil {
@@ -129,7 +130,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			AddColumn(Column("id").Type("INT").AutoIncrement().NotNull().PrimaryKey()).
 			AddColumn(Column("email").Type("VARCHAR").Size(255).NotNull().Unique())
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL AUTO_INCREMENT, email VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (email))"
 
 		if err != nil {
@@ -149,7 +150,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			AddColumn(Column("email").Type("VARCHAR").Size(255).NotNull().Unique()).
 			AddColumn(Column("username").Type("VARCHAR").Size(100).NotNull().Unique())
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL AUTO_INCREMENT, email VARCHAR(255) NOT NULL, username VARCHAR(100) NOT NULL, PRIMARY KEY (id), UNIQUE (email), UNIQUE (username))"
 
 		if err != nil {
@@ -169,7 +170,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			AddColumn(Column("email").Type("VARCHAR").Size(255)).
 			Unique("idx_email", "email")
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL, email VARCHAR(255), CONSTRAINT idx_email UNIQUE (email))"
 
 		if err != nil {
@@ -189,7 +190,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			AddColumn(Column("age").Type("INT")).
 			Check("chk_age", "age >= 0")
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL, age INT, CONSTRAINT chk_age CHECK (age >= 0))"
 
 		if err != nil {
@@ -209,7 +210,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			AddColumn(Column("name").Type("VARCHAR").Size(255)).
 			Index("idx_name", "name")
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL, name VARCHAR(255), INDEX idx_name (name))"
 
 		if err != nil {
@@ -233,7 +234,7 @@ func TestCreateTableBuilder(t *testing.T) {
 					OnDelete("CASCADE"),
 			)
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE orders (id INT NOT NULL, user_id INT, CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE)"
 
 		if err != nil {
@@ -255,7 +256,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			Comment("User accounts table").
 			Engine("InnoDB")
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'User accounts table' ENGINE InnoDB"
 
 		if err != nil {
@@ -275,7 +276,7 @@ func TestCreateTableBuilder(t *testing.T) {
 			AddColumn(Column("user_id").Type("INT")).
 			AddForeignKey(ForeignKey("fk_orders_user", "user_id").References("users", "id").OnDelete("CASCADE").OnUpdate("RESTRICT"))
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE orders (id INT NOT NULL, user_id INT, CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE RESTRICT, PRIMARY KEY (id))"
 
 		if err != nil {
@@ -295,7 +296,7 @@ func TestColumnBuilder(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("name").Type("VARCHAR").Size(100).NotNull())
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (name VARCHAR(100) NOT NULL)"
 
 		if err != nil {
@@ -313,7 +314,7 @@ func TestColumnBuilder(t *testing.T) {
 		q := CreateTable("products").
 			AddColumn(Column("price").Type("DECIMAL").Precision(10, 2).NotNull())
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE products (price DECIMAL(10,2) NOT NULL)"
 
 		if err != nil {
@@ -330,9 +331,9 @@ func TestColumnBuilder(t *testing.T) {
 	t.Run("column with default value", func(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("status").Type("VARCHAR").Size(20).Default("active")).
-			AddColumn(Column("created_at").Type("TIMESTAMP").Default(sqltk.Raw("CURRENT_TIMESTAMP")))
+			AddColumn(Column("created_at").Type("TIMESTAMP").Default(raw.Raw("CURRENT_TIMESTAMP")))
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (status VARCHAR(20) DEFAULT 'active', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
 
 		if err != nil {
@@ -350,7 +351,7 @@ func TestColumnBuilder(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("id").Type("INT").NotNull().AutoIncrement())
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL AUTO_INCREMENT)"
 
 		if err != nil {
@@ -368,7 +369,7 @@ func TestColumnBuilder(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("id").Type("BIGINT").NotNull().AutoIncrement())
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id BIGINT NOT NULL AUTO_INCREMENT)"
 
 		if err != nil {
@@ -386,7 +387,7 @@ func TestColumnBuilder(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("name").Type("VARCHAR").Size(255).Charset("utf8mb4").Collation("utf8mb4_unicode_ci"))
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci)"
 
 		if err != nil {
@@ -404,7 +405,7 @@ func TestColumnBuilder(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("id").Type("INT").NotNull().Comment("Primary key"))
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT NOT NULL COMMENT 'Primary key')"
 
 		if err != nil {
@@ -420,11 +421,11 @@ func TestColumnBuilder(t *testing.T) {
 
 	t.Run("column with raw SQL default", func(t *testing.T) {
 		q := CreateTable("users").
-			AddColumn(Column("status").Type("VARCHAR").Default("active")).                             // String literal
-			AddColumn(Column("created_at").Type("TIMESTAMP").Default(sqltk.Raw("CURRENT_TIMESTAMP"))). // Raw SQL
-			AddColumn(Column("count").Type("INT").Default(0))                                          // Number literal
+			AddColumn(Column("status").Type("VARCHAR").Default("active")).                           // String literal
+			AddColumn(Column("created_at").Type("TIMESTAMP").Default(raw.Raw("CURRENT_TIMESTAMP"))). // Raw SQL
+			AddColumn(Column("count").Type("INT").Default(0))                                        // Number literal
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (status VARCHAR DEFAULT 'active', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, count INT DEFAULT 0)"
 
 		if err != nil {
@@ -456,7 +457,7 @@ func TestCreateTableBuilder_Errors(t *testing.T) {
 
 	t.Run("column without type", func(t *testing.T) {
 		q := CreateTable("users").AddColumn(Column("id"))
-		_, _, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		_, _, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for column without type, got none")
 		}
@@ -464,7 +465,7 @@ func TestCreateTableBuilder_Errors(t *testing.T) {
 
 	t.Run("empty column name", func(t *testing.T) {
 		q := CreateTable("users").AddColumn(Column(""))
-		_, _, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		_, _, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for empty column name, got none")
 		}
@@ -472,7 +473,7 @@ func TestCreateTableBuilder_Errors(t *testing.T) {
 
 	t.Run("invalid size", func(t *testing.T) {
 		q := CreateTable("users").AddColumn(Column("name").Type("VARCHAR").Size(0))
-		_, _, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		_, _, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for invalid size, got none")
 		}
@@ -480,7 +481,7 @@ func TestCreateTableBuilder_Errors(t *testing.T) {
 
 	t.Run("invalid precision", func(t *testing.T) {
 		q := CreateTable("users").AddColumn(Column("price").Type("DECIMAL").Precision(0, 2))
-		_, _, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		_, _, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for invalid precision, got none")
 		}
@@ -488,7 +489,7 @@ func TestCreateTableBuilder_Errors(t *testing.T) {
 
 	t.Run("invalid scale", func(t *testing.T) {
 		q := CreateTable("users").AddColumn(Column("price").Type("DECIMAL").Precision(10, 11))
-		_, _, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		_, _, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for invalid scale, got none")
 		}
@@ -498,7 +499,7 @@ func TestCreateTableBuilder_Errors(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("id").Type("INT").NotNull()).
 			PrimaryKey()
-		_, _, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		_, _, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for primary key without columns, got none")
 		}
@@ -508,7 +509,7 @@ func TestCreateTableBuilder_Errors(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("id").Type("INT").NotNull()).
 			Unique("idx_test")
-		_, _, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		_, _, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for unique constraint without columns, got none")
 		}
@@ -518,7 +519,7 @@ func TestCreateTableBuilder_Errors(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("id").Type("INT").NotNull()).
 			Check("chk_test", "")
-		_, _, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		_, _, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for check constraint without expression, got none")
 		}
@@ -527,8 +528,8 @@ func TestCreateTableBuilder_Errors(t *testing.T) {
 
 func TestCreateTableBuilder_Dialect(t *testing.T) {
 	t.Run("MySQL dialect", func(t *testing.T) {
-		sqltk.SetDialect(sqltk.MySQL())
-		defer sqltk.SetDialect(sqltk.NoQuoteIdent())
+		sqldialect.SetDialect(sqldialect.MySQL())
+		defer sqldialect.SetDialect(sqldialect.NoQuoteIdent())
 
 		q := CreateTable("users").
 			AddColumns(
@@ -551,8 +552,8 @@ func TestCreateTableBuilder_Dialect(t *testing.T) {
 	})
 
 	t.Run("Postgres dialect", func(t *testing.T) {
-		sqltk.SetDialect(sqltk.Postgres())
-		defer sqltk.SetDialect(sqltk.NoQuoteIdent())
+		sqldialect.SetDialect(sqldialect.Postgres())
+		defer sqldialect.SetDialect(sqldialect.NoQuoteIdent())
 
 		q := CreateTable("users").
 			AddColumn(Column("id").Type("INTEGER").NotNull()).
@@ -582,8 +583,8 @@ func TestCreateTableBuilder_Complex(t *testing.T) {
 			AddColumn(Column("email").Type("VARCHAR").Size(255).NotNull()).
 			AddColumn(Column("password_hash").Type("VARCHAR").Size(255).NotNull()).
 			AddColumn(Column("age").Type("INT").Default(18)).
-			AddColumn(Column("created_at").Type("TIMESTAMP").Default(sqltk.Raw("CURRENT_TIMESTAMP"))).
-			AddColumn(Column("updated_at").Type("TIMESTAMP").Default(sqltk.Raw("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"))).
+			AddColumn(Column("created_at").Type("TIMESTAMP").Default(raw.Raw("CURRENT_TIMESTAMP"))).
+			AddColumn(Column("updated_at").Type("TIMESTAMP").Default(raw.Raw("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"))).
 			PrimaryKey("id").
 			Unique("idx_username", "username").
 			Unique("idx_email", "email").
@@ -614,7 +615,7 @@ func TestCreateTableBuilder_Postgres(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("id").Type("INT").NotNull()).
 			AddColumn(Column("name").Type("VARCHAR").Size(255).NotNull()).
-			WithDialect(sqltk.Postgres())
+			WithDialect(sqldialect.Postgres())
 
 		sql, args, err := q.Build()
 		wantSQL := "CREATE TABLE \"users\" (\"id\" INT NOT NULL, \"name\" VARCHAR(255) NOT NULL)"
@@ -637,7 +638,7 @@ func TestCreateTableBuilder_Postgres(t *testing.T) {
 			Collation("utf8mb4_unicode_ci").
 			Comment("User accounts table").
 			Engine("InnoDB").
-			WithDialect(sqltk.Postgres())
+			WithDialect(sqldialect.Postgres())
 
 		sql, args, err := q.Build()
 		wantSQL := "CREATE TABLE \"users\" (\"id\" INT NOT NULL) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'User accounts table' ENGINE InnoDB"
@@ -658,7 +659,7 @@ func TestCreateTableBuilder_Postgres(t *testing.T) {
 			AddColumn(Column("id").Type("INT").NotNull()).
 			AddColumn(Column("email").Type("VARCHAR").Size(255)).
 			Unique("idx_email", "email").
-			WithDialect(sqltk.Postgres())
+			WithDialect(sqldialect.Postgres())
 
 		sql, args, err := q.Build()
 		wantSQL := "CREATE TABLE \"users\" (\"id\" INT NOT NULL, \"email\" VARCHAR(255), CONSTRAINT \"idx_email\" UNIQUE (\"email\"))"
@@ -684,7 +685,7 @@ func TestCreateTableBuilder_Postgres(t *testing.T) {
 					OnDelete("CASCADE"),
 			)
 
-		sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "CREATE TABLE \"orders\" (\"id\" INT NOT NULL, \"user_id\" INT, CONSTRAINT \"fk_orders_user\" FOREIGN KEY (\"user_id\") REFERENCES \"users\" (\"id\") ON DELETE CASCADE)"
 
 		if err != nil {
@@ -702,7 +703,7 @@ func TestCreateTableBuilder_Postgres(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("id").Type("INT").NotNull().AutoIncrement())
 
-		sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "CREATE TABLE \"users\" (\"id\" SERIAL NOT NULL)"
 
 		if err != nil {
@@ -720,7 +721,7 @@ func TestCreateTableBuilder_Postgres(t *testing.T) {
 		q := CreateTable("users").
 			AddColumn(Column("id").Type("BIGINT").NotNull().AutoIncrement())
 
-		sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "CREATE TABLE \"users\" (\"id\" BIGSERIAL NOT NULL)"
 
 		if err != nil {
@@ -747,7 +748,7 @@ func TestCreateTable_OnUpdateOnDeleteWithSqlFunc(t *testing.T) {
 					OnUpdate("RESTRICT"),
 			)
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE orders (id INT, user_id INT, CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE RESTRICT, PRIMARY KEY (id))"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -771,7 +772,7 @@ func TestCreateTable_OnUpdateOnDeleteWithSqlFunc(t *testing.T) {
 					OnUpdate("NO ACTION"),
 			)
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE orders (id INT, user_id INT, CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL ON UPDATE NO ACTION, PRIMARY KEY (id))"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -791,7 +792,7 @@ func TestCreateTable_ColumnOnUpdate(t *testing.T) {
 			AddColumn(Column("id").Type("INT").PrimaryKey()).
 			AddColumn(Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP"))
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT, updated_at TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id))"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -809,7 +810,7 @@ func TestCreateTable_ColumnOnUpdate(t *testing.T) {
 			AddColumn(Column("id").Type("INT").PrimaryKey()).
 			AddColumn(Column("updated_at").Type("TIMESTAMP").OnUpdate(mysqlfunc.CurrentTimestamp()))
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT, updated_at TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id))"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -829,7 +830,7 @@ func TestCreateTable_OnUpdate_DialectSpecific(t *testing.T) {
 			AddColumn(Column("id").Type("INT").PrimaryKey()).
 			AddColumn(Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP"))
 
-		sql, args, err := q.WithDialect(sqltk.MySQL()).Build()
+		sql, args, err := q.WithDialect(sqldialect.MySQL()).Build()
 		wantSQL := "CREATE TABLE `users` (`id` INT, `updated_at` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (`id`))"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -847,7 +848,7 @@ func TestCreateTable_OnUpdate_DialectSpecific(t *testing.T) {
 			AddColumn(Column("id").Type("INT").PrimaryKey()).
 			AddColumn(Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP"))
 
-		sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := `CREATE TABLE "users" ("id" INT, "updated_at" TIMESTAMP, PRIMARY KEY ("id"));
 
 CREATE OR REPLACE FUNCTION "users_updated_at_update_trigger"()
@@ -879,7 +880,7 @@ CREATE OR REPLACE TRIGGER "tr_users_updated_at_update"
 			AddColumn(Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP")).
 			AddColumn(Column("modified_at").Type("TIMESTAMP").OnUpdate("NOW()"))
 
-		sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		// Should contain both trigger functions and triggers
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -909,7 +910,7 @@ func TestCreateTable_OnUpdate_IfNotExists(t *testing.T) {
 			AddColumn(Column("id").Type("INT").PrimaryKey()).
 			AddColumn(Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP"))
 
-		sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

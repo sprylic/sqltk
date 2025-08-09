@@ -3,7 +3,7 @@ package ddl
 import (
 	"testing"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 func TestDropSchema(t *testing.T) {
@@ -52,7 +52,7 @@ func TestDropSchema(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.MySQL())
+			tt.builder.WithDialect(sqldialect.MySQL())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -114,7 +114,7 @@ func TestDropSchemaPostgres(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.Postgres())
+			tt.builder.WithDialect(sqldialect.Postgres())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -171,7 +171,7 @@ func TestDropSchemaNoQuoteIdent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.NoQuoteIdent())
+			tt.builder.WithDialect(sqldialect.NoQuoteIdent())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -199,7 +199,7 @@ func TestDropSchemaNoQuoteIdent(t *testing.T) {
 
 func TestDropSchemaDebugSQL(t *testing.T) {
 	builder := DropSchema("testschema").IfExists().Cascade()
-	builder.WithDialect(shared.Postgres())
+	builder.WithDialect(sqldialect.Postgres())
 
 	debugSQL := builder.DebugSQL()
 	expected := `DROP SCHEMA IF EXISTS "testschema" CASCADE`

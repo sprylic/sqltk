@@ -3,9 +3,10 @@ package ddl
 import (
 	"errors"
 	"fmt"
+	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 	"github.com/sprylic/sqltk/sqlfunc"
 )
 
@@ -18,7 +19,7 @@ type CreateTableBuilder struct {
 	ifNotExists bool
 	temporary   bool
 	err         error
-	dialect     shared.Dialect
+	dialect     sqldialect.Dialect
 }
 
 // CreateTable creates a new CreateTableBuilder for the given table.
@@ -486,7 +487,7 @@ func (b *CreateTableBuilder) AddForeignKeys(fkbs ...*ForeignKeyBuilder) *CreateT
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *CreateTableBuilder) WithDialect(d shared.Dialect) *CreateTableBuilder {
+func (b *CreateTableBuilder) WithDialect(d sqldialect.Dialect) *CreateTableBuilder {
 	if b.err != nil {
 		return b
 	}
@@ -508,7 +509,7 @@ func (b *CreateTableBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = shared.GetDialect() // Use global dialect instead of defaulting to MySQL
+		dialect = sqldialect.GetDialect() // Use global dialect instead of defaulting to MySQL
 	}
 
 	var sb strings.Builder
@@ -609,7 +610,7 @@ func (b *CreateTableBuilder) Build() (string, []interface{}, error) {
 	}
 
 	// For PostgreSQL, generate triggers for OnUpdate columns
-	if dialect == shared.Postgres() {
+	if dialect == sqldialect.Postgres() {
 		triggerSQL := b.buildPostgresTriggers(dialect)
 		if triggerSQL != "" {
 			sb.WriteString(";\n")
@@ -621,7 +622,7 @@ func (b *CreateTableBuilder) Build() (string, []interface{}, error) {
 }
 
 // buildPostgresTriggers generates PostgreSQL triggers for columns with OnUpdate
-func (b *CreateTableBuilder) buildPostgresTriggers(dialect shared.Dialect) string {
+func (b *CreateTableBuilder) buildPostgresTriggers(dialect sqldialect.Dialect) string {
 	var triggers []string
 
 	for _, col := range b.columns {
@@ -680,7 +681,7 @@ END$$;`,
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *CreateTableBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }
 
 // Column constraint methods that can be chained after convenience methods

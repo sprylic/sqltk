@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/sprylic/sqltk/ddl"
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // This example demonstrates the unified constraint builder API.
@@ -13,7 +13,7 @@ import (
 // function that can be chained with different constraint types.
 func main() {
 	// Set the dialect (optional, defaults to MySQL)
-	shared.SetDialect(shared.MySQL())
+	sqldialect.SetDialect(sqldialect.MySQL())
 
 	// Example 1: Create a table with various constraints using the unified constraint builder API
 	createTableSQL, _, err := ddl.CreateTable("users").

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/sprylic/sqltk/ddl"
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 		AddColumn(ddl.Column("email").Type("VARCHAR").Size(255)).
 		AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP"))
 
-	mysqlSQL, _, err := mysqlTable.WithDialect(shared.MySQL()).Build()
+	mysqlSQL, _, err := mysqlTable.WithDialect(sqldialect.MySQL()).Build()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -34,7 +34,7 @@ func main() {
 		AddColumn(ddl.Column("email").Type("VARCHAR").Size(255)).
 		AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP"))
 
-	postgresSQL, _, err := postgresTable.WithDialect(shared.Postgres()).Build()
+	postgresSQL, _, err := postgresTable.WithDialect(sqldialect.Postgres()).Build()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -50,7 +50,7 @@ func main() {
 		AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP")).
 		AddColumn(ddl.Column("modified_at").Type("TIMESTAMP").OnUpdate("NOW()"))
 
-	multiSQL, _, err := multiTable.WithDialect(shared.Postgres()).Build()
+	multiSQL, _, err := multiTable.WithDialect(sqldialect.Postgres()).Build()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -66,7 +66,7 @@ func main() {
 		AddColumn(ddl.Column("name").Type("VARCHAR").Size(255).NotNull()).
 		AddColumn(ddl.Column("updated_at").Type("TIMESTAMP").OnUpdate("CURRENT_TIMESTAMP"))
 
-	safeSQL, _, err := safeTable.WithDialect(shared.Postgres()).Build()
+	safeSQL, _, err := safeTable.WithDialect(sqldialect.Postgres()).Build()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return

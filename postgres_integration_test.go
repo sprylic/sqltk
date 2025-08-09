@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/sprylic/sqltk/pgfunc"
+	"github.com/sprylic/sqltk/pgtypes"
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 	"math/rand"
 	"os"
 	"strings"
@@ -44,7 +47,7 @@ func TestPostgresIntegration(t *testing.T) {
 
 	// Create test database (PostgreSQL doesn't support IF NOT EXISTS for CREATE DATABASE)
 	createDB := ddl.CreateDatabase(testDBName)
-	sqlStr, _, err := createDB.WithDialect(Postgres()).Build()
+	sqlStr, _, err := createDB.WithDialect(sqldialect.Postgres()).Build()
 	if err != nil {
 		t.Fatalf("create database build: %v", err)
 	}
@@ -99,13 +102,13 @@ func TestPostgresIntegration(t *testing.T) {
 		// Drop test database (must disconnect all clients first)
 		_, _ = defaultDB.Exec(fmt.Sprintf("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '%s' AND pid <> pg_backend_pid()", testDBName))
 		dropDB := ddl.DropDatabase(testDBName).IfExists().Cascade()
-		sqlStr, _, _ := dropDB.WithDialect(Postgres()).Build()
+		sqlStr, _, _ := dropDB.WithDialect(sqldialect.Postgres()).Build()
 		_, _ = defaultDB.Exec(sqlStr)
 	}()
 
 	// Create test schema
 	createSchema := ddl.CreateSchema(testSchema).IfNotExists()
-	sqlStr, _, err = createSchema.WithDialect(Postgres()).Build()
+	sqlStr, _, err = createSchema.WithDialect(sqldialect.Postgres()).Build()
 	if err != nil {
 		t.Fatalf("create schema build: %v", err)
 	}
@@ -115,7 +118,7 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 	defer func() {
 		dropSchema := ddl.DropSchema(testSchema).IfExists().Cascade()
-		sqlStr, _, _ := dropSchema.WithDialect(Postgres()).Build()
+		sqlStr, _, _ := dropSchema.WithDialect(sqldialect.Postgres()).Build()
 		_, _ = db.Exec(sqlStr)
 	}()
 
@@ -162,7 +165,7 @@ func testPostgresDDL(t *testing.T, db *sql.DB) {
 			Unique("idx_email", "email").
 			Check("chk_age", "age >= 0")
 
-		sqlStr, args, err := q.WithDialect(Postgres()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		if err != nil {
 			t.Fatalf("create table build: %v", err)
 		}
@@ -175,7 +178,7 @@ func testPostgresDDL(t *testing.T, db *sql.DB) {
 	// Test CREATE INDEX
 	t.Run("Create Index", func(t *testing.T) {
 		q := ddl.CreateIndex("idx_users_name", "users").Columns("name")
-		sqlStr, args, err := q.WithDialect(Postgres()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		if err != nil {
 			t.Fatalf("create index build: %v", err)
 		}
@@ -189,7 +192,7 @@ func testPostgresDDL(t *testing.T, db *sql.DB) {
 	t.Run("Create View", func(t *testing.T) {
 		subq := Select("name", "COUNT(*) as count").From("users").GroupBy("name")
 		q := ddl.CreateView("user_stats").As(subq)
-		sqlStr, args, err := q.WithDialect(Postgres()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		if err != nil {
 			t.Fatalf("create view build: %v", err)
 		}
@@ -206,7 +209,7 @@ func testPostgresDDL(t *testing.T, db *sql.DB) {
 			AddConstraint(
 				ddl.NewConstraint().Unique("idx_email_age", "email", "age"),
 			)
-		sqlStr, args, err := q.WithDialect(Postgres()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		if err != nil {
 			t.Fatalf("alter table build: %v", err)
 		}
@@ -225,7 +228,8 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 		tags := []string{"admin", "verified"}
 
 		pq := NewPostgresInsert("users")
-		pq.InsertBuilder = pq.InsertBuilder.Columns("name", "email", "age", "data", "tags").Values("Alice", "alice@example.com", 30, PGJSON{jsonData}, PGArray{tags})
+		pq.InsertBuilder = pq.InsertBuilder.Columns("name", "email", "age", "data", "tags").
+			Values("Alice", "alice@example.com", 30, pgtypes.PGJSON{V: jsonData}, pgtypes.PGArray{V: tags})
 		pq = pq.Returning("id", "name", "data")
 
 		sqlStr, args, err := pq.Build()
@@ -273,7 +277,7 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 		// TODO: Update to not use raw subquery or string condition
 		// Complex query with join, subquery, and aggregation
 		// Use raw SQL for subquery to avoid SelectBuilder type issues
-		subq := Raw("(SELECT AVG(amount) FROM orders)")
+		subq := raw.Raw("(SELECT AVG(amount) FROM orders)")
 		q := Select("u.name", "COUNT(o.id) as order_count", "SUM(o.amount) as total_amount").
 			From(Alias("users", "u")).
 			LeftJoin("orders o").On("o.user_id", "u.id").
@@ -281,7 +285,7 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 			GroupBy("u.name").
 			OrderBy("total_amount DESC")
 
-		sqlStr, args, err := q.WithDialect(Postgres()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		if err != nil {
 			t.Fatalf("complex select build: %v", err)
 		}
@@ -318,10 +322,10 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 		// Update with RETURNING
 		q := Update("users").
 			Set("age", 26).
-			Set("updated_at", Raw("NOW()")).
+			Set("updated_at", raw.Raw("NOW()")).
 			Where(NewStringCondition("name = ?", "Bob"))
 
-		sqlStr, args, err := q.WithDialect(Postgres()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		if err != nil {
 			t.Fatalf("update build: %v", err)
 		}
@@ -354,7 +358,7 @@ func testPostgresCRUD(t *testing.T, db *sql.DB) {
 		// Delete with RETURNING
 		q := Delete("users").Where(NewStringCondition("name = ?", "Charlie"))
 
-		sqlStr, args, err := q.WithDialect(Postgres()).Build()
+		sqlStr, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		if err != nil {
 			t.Fatalf("delete build: %v", err)
 		}
@@ -387,7 +391,7 @@ func testPostgresAdvanced(t *testing.T, db *sql.DB) {
 
 		// Test querying non-existent column (should not error during build, but during execution)
 		q2 := Select("invalid_column").From("users")
-		sqlStr, args, err := q2.WithDialect(Postgres()).Build()
+		sqlStr, args, err := q2.WithDialect(sqldialect.Postgres()).Build()
 		if err != nil {
 			t.Fatalf("unexpected error for valid select: %v", err)
 		}

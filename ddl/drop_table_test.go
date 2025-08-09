@@ -1,12 +1,12 @@
 package ddl
 
 import (
-	"github.com/sprylic/sqltk"
+	"github.com/sprylic/sqltk/sqldialect"
 	"testing"
 )
 
 func init() {
-	sqltk.SetDialect(sqltk.NoQuoteIdent())
+	sqldialect.SetDialect(sqldialect.NoQuoteIdent())
 }
 
 func TestDropTableBuilder(t *testing.T) {
@@ -101,7 +101,7 @@ func TestDropTableBuilder(t *testing.T) {
 	})
 
 	t.Run("drop table with dialect quoting", func(t *testing.T) {
-		sql, _, err := DropTable("users").WithDialect(sqltk.MySQL()).Build()
+		sql, _, err := DropTable("users").WithDialect(sqldialect.MySQL()).Build()
 		wantSQL := "DROP TABLE `users`"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -112,7 +112,7 @@ func TestDropTableBuilder(t *testing.T) {
 	})
 
 	t.Run("basic drop table (postgres)", func(t *testing.T) {
-		sql, args, err := DropTable("users").WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := DropTable("users").WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "DROP TABLE \"users\""
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -126,7 +126,7 @@ func TestDropTableBuilder(t *testing.T) {
 	})
 
 	t.Run("drop table if exists (postgres)", func(t *testing.T) {
-		sql, _, err := DropTable("users").IfExists().WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := DropTable("users").IfExists().WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "DROP TABLE IF EXISTS \"users\""
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -137,7 +137,7 @@ func TestDropTableBuilder(t *testing.T) {
 	})
 
 	t.Run("drop table cascade (postgres)", func(t *testing.T) {
-		sql, _, err := DropTable("users").Cascade().WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := DropTable("users").Cascade().WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "DROP TABLE \"users\" CASCADE"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -148,7 +148,7 @@ func TestDropTableBuilder(t *testing.T) {
 	})
 
 	t.Run("drop table restrict (postgres)", func(t *testing.T) {
-		sql, _, err := DropTable("users").Restrict().WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := DropTable("users").Restrict().WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "DROP TABLE \"users\" RESTRICT"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -159,7 +159,7 @@ func TestDropTableBuilder(t *testing.T) {
 	})
 
 	t.Run("drop table with dialect quoting (postgres)", func(t *testing.T) {
-		sql, _, err := DropTable("users").WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := DropTable("users").WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "DROP TABLE \"users\""
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

@@ -1,12 +1,12 @@
 package ddl
 
 import (
-	"github.com/sprylic/sqltk"
+	"github.com/sprylic/sqltk/sqldialect"
 	"testing"
 )
 
 func init() {
-	sqltk.SetDialect(sqltk.NoQuoteIdent())
+	sqldialect.SetDialect(sqldialect.NoQuoteIdent())
 }
 
 func TestTruncateTableBuilder(t *testing.T) {
@@ -81,7 +81,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("truncate table with dialect quoting", func(t *testing.T) {
-		sql, _, err := TruncateTable("users").WithDialect(sqltk.MySQL()).Build()
+		sql, _, err := TruncateTable("users").WithDialect(sqldialect.MySQL()).Build()
 		wantSQL := "TRUNCATE TABLE `users`"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -92,7 +92,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("basic truncate table (postgres)", func(t *testing.T) {
-		sql, args, err := TruncateTable("users").WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := TruncateTable("users").WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "TRUNCATE TABLE \"users\""
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -106,7 +106,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("truncate table cascade (postgres)", func(t *testing.T) {
-		sql, _, err := TruncateTable("users").Cascade().WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := TruncateTable("users").Cascade().WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "TRUNCATE TABLE \"users\" CASCADE"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -117,7 +117,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("truncate table restrict (postgres)", func(t *testing.T) {
-		sql, _, err := TruncateTable("users").Restrict().WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := TruncateTable("users").Restrict().WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "TRUNCATE TABLE \"users\" RESTRICT"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -128,7 +128,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("truncate table restart identity (postgres)", func(t *testing.T) {
-		sql, _, err := TruncateTable("users").Restart().WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := TruncateTable("users").Restart().WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "TRUNCATE TABLE \"users\" RESTART IDENTITY"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -139,7 +139,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("truncate table continue identity (postgres)", func(t *testing.T) {
-		sql, _, err := TruncateTable("users").Continue().WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := TruncateTable("users").Continue().WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "TRUNCATE TABLE \"users\" CONTINUE IDENTITY"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -150,7 +150,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("truncate table restart identity cascade (postgres)", func(t *testing.T) {
-		sql, _, err := TruncateTable("users").Restart().Cascade().WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := TruncateTable("users").Restart().Cascade().WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "TRUNCATE TABLE \"users\" RESTART IDENTITY CASCADE"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -161,7 +161,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("truncate table continue identity restrict (postgres)", func(t *testing.T) {
-		sql, _, err := TruncateTable("users").Continue().Restrict().WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := TruncateTable("users").Continue().Restrict().WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "TRUNCATE TABLE \"users\" CONTINUE IDENTITY RESTRICT"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -172,7 +172,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("truncate multiple tables with cascade (postgres)", func(t *testing.T) {
-		sql, _, err := TruncateTable("users", "orders").Cascade().WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := TruncateTable("users", "orders").Cascade().WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "TRUNCATE TABLE \"users\", \"orders\" CASCADE"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -183,7 +183,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("truncate multiple tables restart identity cascade (postgres)", func(t *testing.T) {
-		sql, _, err := TruncateTable("users", "orders").Restart().Cascade().WithDialect(sqltk.Postgres()).Build()
+		sql, _, err := TruncateTable("users", "orders").Restart().Cascade().WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "TRUNCATE TABLE \"users\", \"orders\" RESTART IDENTITY CASCADE"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -240,7 +240,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("restart and continue are mutually exclusive", func(t *testing.T) {
-		q := TruncateTable("users").Restart().Continue().WithDialect(sqltk.Postgres())
+		q := TruncateTable("users").Restart().Continue().WithDialect(sqldialect.Postgres())
 		sql, _, err := q.Build()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -253,7 +253,7 @@ func TestTruncateTableBuilder(t *testing.T) {
 	})
 
 	t.Run("restart and continue are ignored for non-postgres dialects", func(t *testing.T) {
-		q := TruncateTable("users").Restart().Continue().WithDialect(sqltk.MySQL())
+		q := TruncateTable("users").Restart().Continue().WithDialect(sqldialect.MySQL())
 		sql, _, err := q.Build()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

@@ -2,9 +2,10 @@ package ddl
 
 import (
 	"errors"
+	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // CreateDatabaseBuilder builds CREATE DATABASE statements.
@@ -15,7 +16,7 @@ type CreateDatabaseBuilder struct {
 	collation   string
 	options     []DatabaseOption
 	err         error
-	dialect     shared.Dialect
+	dialect     sqldialect.Dialect
 }
 
 // DatabaseOption represents a database option.
@@ -69,7 +70,7 @@ func (b *CreateDatabaseBuilder) Option(name, value string) *CreateDatabaseBuilde
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *CreateDatabaseBuilder) WithDialect(d shared.Dialect) *CreateDatabaseBuilder {
+func (b *CreateDatabaseBuilder) WithDialect(d sqldialect.Dialect) *CreateDatabaseBuilder {
 	b.dialect = d
 	return b
 }
@@ -85,7 +86,7 @@ func (b *CreateDatabaseBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = shared.GetDialect()
+		dialect = sqldialect.GetDialect()
 	}
 
 	var parts []string
@@ -123,5 +124,5 @@ func (b *CreateDatabaseBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *CreateDatabaseBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

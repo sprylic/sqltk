@@ -3,7 +3,7 @@ package ddl
 import (
 	"testing"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 func TestDropDatabase(t *testing.T) {
@@ -32,7 +32,7 @@ func TestDropDatabase(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.MySQL())
+			tt.builder.WithDialect(sqldialect.MySQL())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -89,7 +89,7 @@ func TestDropDatabasePostgres(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.Postgres())
+			tt.builder.WithDialect(sqldialect.Postgres())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -136,7 +136,7 @@ func TestDropDatabaseNoQuoteIdent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.NoQuoteIdent())
+			tt.builder.WithDialect(sqldialect.NoQuoteIdent())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -164,7 +164,7 @@ func TestDropDatabaseNoQuoteIdent(t *testing.T) {
 
 func TestDropDatabaseDebugSQL(t *testing.T) {
 	builder := DropDatabase("testdb").IfExists().Cascade()
-	builder.WithDialect(shared.Postgres())
+	builder.WithDialect(sqldialect.Postgres())
 
 	debugSQL := builder.DebugSQL()
 	expected := `DROP DATABASE IF EXISTS "testdb" CASCADE`

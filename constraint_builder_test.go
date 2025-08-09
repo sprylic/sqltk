@@ -1,6 +1,7 @@
 package sqltk
 
 import (
+	"github.com/sprylic/sqltk/sqldialect"
 	"testing"
 
 	"github.com/sprylic/sqltk/ddl"
@@ -183,7 +184,7 @@ func TestConstraintBuilderWithAlterTable(t *testing.T) {
 	t.Run("add check constraint with builder", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
 			AddConstraint(ddl.NewConstraint().Check("chk_age", "age >= 0")).
-			WithDialect(NoQuoteIdent()).Build()
+			WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD CONSTRAINT chk_age CHECK (age >= 0)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -196,7 +197,7 @@ func TestConstraintBuilderWithAlterTable(t *testing.T) {
 	t.Run("add unique constraint with builder", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
 			AddConstraint(ddl.NewConstraint().Unique("idx_email", "email")).
-			WithDialect(NoQuoteIdent()).Build()
+			WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD CONSTRAINT idx_email UNIQUE (email)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -211,7 +212,7 @@ func TestConstraintBuilderWithAlterTable(t *testing.T) {
 			AddConstraint(ddl.NewConstraint().ForeignKey("fk_user_role", "role_id").
 				WithReference("roles", "id").
 				WithOnDelete("CASCADE")).
-			WithDialect(NoQuoteIdent()).Build()
+			WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD CONSTRAINT fk_user_role FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -228,7 +229,7 @@ func TestConstraintBuilderWithAlterTable(t *testing.T) {
 					References("roles", "id").
 					OnDelete("CASCADE"),
 			).
-			WithDialect(NoQuoteIdent()).Build()
+			WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD CONSTRAINT fk_user_role FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -241,7 +242,7 @@ func TestConstraintBuilderWithAlterTable(t *testing.T) {
 	t.Run("add raw constraint", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
 			AddConstraint(ddl.NewConstraint().Raw("chk_custom", "custom_expression")).
-			WithDialect(NoQuoteIdent()).Build()
+			WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD CONSTRAINT chk_custom CHECK (custom_expression)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -254,7 +255,7 @@ func TestConstraintBuilderWithAlterTable(t *testing.T) {
 	t.Run("add raw constraint directly", func(t *testing.T) {
 		sql, _, err := ddl.AlterTable("users").
 			AddRawConstraint("chk_custom", "custom_expression").
-			WithDialect(NoQuoteIdent()).Build()
+			WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "ALTER TABLE users ADD CONSTRAINT chk_custom CHECK (custom_expression)"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -271,7 +272,7 @@ func TestConstraintBuilderWithCreateTable(t *testing.T) {
 			AddColumnWithType("id", "INT").
 			AddColumnWithType("age", "INT").
 			Check("chk_age", "age >= 0").
-			WithDialect(NoQuoteIdent()).Build()
+			WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT, age INT, CONSTRAINT chk_age CHECK (age >= 0))"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -286,7 +287,7 @@ func TestConstraintBuilderWithCreateTable(t *testing.T) {
 			AddColumnWithType("id", "INT").
 			AddColumnWithType("email", "VARCHAR").
 			Unique("idx_email", "email").
-			WithDialect(NoQuoteIdent()).Build()
+			WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "CREATE TABLE users (id INT, email VARCHAR, CONSTRAINT idx_email UNIQUE (email))"
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

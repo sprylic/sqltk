@@ -1,12 +1,14 @@
 package sqltk
 
 import (
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 	"reflect"
 	"testing"
 )
 
 func init() {
-	SetDialect(NoQuoteIdent())
+	sqldialect.SetDialect(sqldialect.NoQuoteIdent())
 }
 
 func TestUpdateBuilder(t *testing.T) {
@@ -58,7 +60,7 @@ func TestUpdateBuilder(t *testing.T) {
 	})
 
 	t.Run("where raw", func(t *testing.T) {
-		q := Update("users").Set("name", "Alice").Where(AsCondition(Raw("id = 1")))
+		q := Update("users").Set("name", "Alice").Where(raw.Cond("id = 1"))
 		sql, args, err := q.Build()
 		wantSQL := "UPDATE users SET name = ? WHERE id = 1"
 		wantArgs := []interface{}{"Alice"}

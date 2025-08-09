@@ -2,7 +2,11 @@ package sqltk
 
 import (
 	"errors"
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
+
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // UpdateBuilder builds SQL UPDATE queries.
@@ -11,7 +15,7 @@ type UpdateBuilder struct {
 	sets    []string
 	setArgs []interface{}
 	whereClause
-	dialect Dialect // per-builder dialect, if set
+	dialect sqldialect.Dialect // per-builder dialect, if set
 }
 
 // Update creates a new UpdateBuilder for the given table.
@@ -152,12 +156,12 @@ func (b *UpdateBuilder) WhereNotExists(subquery interface{}) *UpdateBuilder {
 
 // WhereColsEqual adds a WHERE clause for column equality (column1 = column2).
 func (b *UpdateBuilder) WhereColsEqual(column1, column2 string) *UpdateBuilder {
-	b.Where(Raw(column1 + " = " + column2))
+	b.Where(raw.Raw(column1 + " = " + column2))
 	return b
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *UpdateBuilder) WithDialect(d Dialect) *UpdateBuilder {
+func (b *UpdateBuilder) WithDialect(d sqldialect.Dialect) *UpdateBuilder {
 	b.dialect = d
 	return b
 }
@@ -179,7 +183,7 @@ func (b *UpdateBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = GetDialect()
+		dialect = sqldialect.GetDialect()
 	}
 	placeholderIdx := 1
 
@@ -247,5 +251,5 @@ func (b *PostgresUpdateBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *UpdateBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

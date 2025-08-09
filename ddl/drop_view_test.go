@@ -1,7 +1,7 @@
 package ddl
 
 import (
-	"github.com/sprylic/sqltk"
+	"github.com/sprylic/sqltk/sqldialect"
 	"testing"
 )
 
@@ -9,7 +9,7 @@ func TestDropViewBuilder(t *testing.T) {
 	t.Run("basic drop view", func(t *testing.T) {
 		q := DropView("active_users")
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW active_users"
 
 		if err != nil {
@@ -27,7 +27,7 @@ func TestDropViewBuilder(t *testing.T) {
 		q := DropView("user_stats").
 			IfExists()
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW IF EXISTS user_stats"
 
 		if err != nil {
@@ -45,7 +45,7 @@ func TestDropViewBuilder(t *testing.T) {
 		q := DropView("complex_view").
 			Cascade()
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW complex_view CASCADE"
 
 		if err != nil {
@@ -63,7 +63,7 @@ func TestDropViewBuilder(t *testing.T) {
 		q := DropView("important_view").
 			Restrict()
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW important_view RESTRICT"
 
 		if err != nil {
@@ -82,7 +82,7 @@ func TestDropViewBuilder(t *testing.T) {
 			IfExists().
 			Cascade()
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW IF EXISTS temp_view CASCADE"
 
 		if err != nil {
@@ -101,7 +101,7 @@ func TestDropViewBuilder(t *testing.T) {
 			IfExists().
 			Restrict()
 
-		sql, args, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		sql, args, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		wantSQL := "DROP VIEW IF EXISTS protected_view RESTRICT"
 
 		if err != nil {
@@ -119,7 +119,7 @@ func TestDropViewBuilder(t *testing.T) {
 func TestDropViewBuilder_Errors(t *testing.T) {
 	t.Run("empty view name", func(t *testing.T) {
 		q := DropView("")
-		_, _, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		_, _, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for empty view name, got none")
 		}
@@ -129,7 +129,7 @@ func TestDropViewBuilder_Errors(t *testing.T) {
 		q := DropView("test_view").
 			Cascade().
 			Restrict()
-		_, _, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		_, _, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for using both CASCADE and RESTRICT, got none")
 		}
@@ -139,7 +139,7 @@ func TestDropViewBuilder_Errors(t *testing.T) {
 		q := DropView("test_view").
 			Restrict().
 			Cascade()
-		_, _, err := q.WithDialect(sqltk.NoQuoteIdent()).Build()
+		_, _, err := q.WithDialect(sqldialect.NoQuoteIdent()).Build()
 		if err == nil {
 			t.Errorf("expected error for using both RESTRICT and CASCADE, got none")
 		}
@@ -150,7 +150,7 @@ func TestDropViewBuilder_Dialect(t *testing.T) {
 	t.Run("MySQL dialect", func(t *testing.T) {
 		q := DropView("active_users")
 
-		sql, args, err := q.WithDialect(sqltk.MySQL()).Build()
+		sql, args, err := q.WithDialect(sqldialect.MySQL()).Build()
 		wantSQL := "DROP VIEW `active_users`"
 
 		if err != nil {
@@ -167,7 +167,7 @@ func TestDropViewBuilder_Dialect(t *testing.T) {
 	t.Run("Postgres dialect", func(t *testing.T) {
 		q := DropView("active_users")
 
-		sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "DROP VIEW \"active_users\""
 
 		if err != nil {
@@ -185,7 +185,7 @@ func TestDropViewBuilder_Dialect(t *testing.T) {
 		q := DropView("user_stats").
 			IfExists()
 
-		sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "DROP VIEW IF EXISTS \"user_stats\""
 
 		if err != nil {
@@ -203,7 +203,7 @@ func TestDropViewBuilder_Dialect(t *testing.T) {
 		q := DropView("complex_view").
 			Cascade()
 
-		sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "DROP VIEW \"complex_view\" CASCADE"
 
 		if err != nil {
@@ -221,7 +221,7 @@ func TestDropViewBuilder_Dialect(t *testing.T) {
 		q := DropView("important_view").
 			Restrict()
 
-		sql, args, err := q.WithDialect(sqltk.Postgres()).Build()
+		sql, args, err := q.WithDialect(sqldialect.Postgres()).Build()
 		wantSQL := "DROP VIEW \"important_view\" RESTRICT"
 
 		if err != nil {

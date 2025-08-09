@@ -3,9 +3,11 @@ package ddl
 import (
 	"errors"
 	"fmt"
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // CreateViewBuilder builds CREATE VIEW statements.
@@ -15,7 +17,7 @@ type CreateViewBuilder struct {
 	orReplace    bool
 	materialized bool // For future materialized view support
 	err          error
-	dialect      shared.Dialect
+	dialect      sqldialect.Dialect
 }
 
 // CreateView creates a new CREATE VIEW builder.
@@ -47,10 +49,10 @@ func (b *CreateViewBuilder) As(query interface{}) *CreateViewBuilder {
 	}
 
 	switch v := query.(type) {
-	case shared.Raw:
+	case raw.Raw:
 		b.selectSQL = string(v)
 		return b
-	case *shared.Raw:
+	case *raw.Raw:
 		b.selectSQL = string(*v)
 		return b
 	case interface {
@@ -92,7 +94,7 @@ func (b *CreateViewBuilder) Materialized() *CreateViewBuilder {
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *CreateViewBuilder) WithDialect(d shared.Dialect) *CreateViewBuilder {
+func (b *CreateViewBuilder) WithDialect(d sqldialect.Dialect) *CreateViewBuilder {
 	if b.err != nil {
 		return b
 	}
@@ -114,7 +116,7 @@ func (b *CreateViewBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = shared.GetDialect() // Use global dialect instead of defaulting to MySQL
+		dialect = sqldialect.GetDialect() // Use global dialect instead of defaulting to MySQL
 	}
 
 	var sb strings.Builder
@@ -140,5 +142,5 @@ func (b *CreateViewBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *CreateViewBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

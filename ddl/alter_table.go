@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldebug"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // AlterTableBuilder builds SQL ALTER TABLE queries.
@@ -13,7 +14,7 @@ type AlterTableBuilder struct {
 	tableName  string
 	operations []AlterOperation
 	err        error
-	dialect    shared.Dialect
+	dialect    sqldialect.Dialect
 }
 
 // AlterOperation represents a single ALTER TABLE operation.
@@ -314,7 +315,7 @@ func (b *AlterTableBuilder) AddForeignKey(fkb *ForeignKeyBuilder) *AlterTableBui
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *AlterTableBuilder) WithDialect(d shared.Dialect) *AlterTableBuilder {
+func (b *AlterTableBuilder) WithDialect(d sqldialect.Dialect) *AlterTableBuilder {
 	if b.err != nil {
 		return b
 	}
@@ -336,7 +337,7 @@ func (b *AlterTableBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = shared.GetDialect() // Use global dialect instead of defaulting to MySQL
+		dialect = sqldialect.GetDialect() // Use global dialect instead of defaulting to MySQL
 	}
 
 	var sb strings.Builder
@@ -363,7 +364,7 @@ func (b *AlterTableBuilder) Build() (string, []interface{}, error) {
 }
 
 // buildOperationSQL builds the SQL for a single ALTER TABLE operation.
-func (b *AlterTableBuilder) buildOperationSQL(op AlterOperation, dialect shared.Dialect) (string, error) {
+func (b *AlterTableBuilder) buildOperationSQL(op AlterOperation, dialect sqldialect.Dialect) (string, error) {
 	switch op.Type {
 	case AddColumnType:
 		col := ColumnDef{
@@ -442,5 +443,5 @@ func (b *AlterTableBuilder) buildOperationSQL(op AlterOperation, dialect shared.
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *AlterTableBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

@@ -2,12 +2,14 @@ package sqltk
 
 import (
 	"encoding/json"
+	"github.com/sprylic/sqltk/pgtypes"
+	"github.com/sprylic/sqltk/sqldialect"
 	"reflect"
 	"testing"
 )
 
 func init() {
-	SetDialect(NoQuoteIdent())
+	sqldialect.SetDialect(sqldialect.NoQuoteIdent())
 }
 
 func TestInsertBuilder(t *testing.T) {
@@ -115,7 +117,7 @@ func TestPostgresInsertBuilder_Returning(t *testing.T) {
 func TestPostgresInsertBuilder_PGJSON(t *testing.T) {
 	pq := NewPostgresInsert("users")
 	jsonVal := map[string]interface{}{"foo": 1, "bar": []int{2, 3}}
-	pq.InsertBuilder = pq.InsertBuilder.Columns("name", "data").Values("Alice", PGJSON{V: jsonVal})
+	pq.InsertBuilder = pq.InsertBuilder.Columns("name", "data").Values("Alice", pgtypes.PGJSON{V: jsonVal})
 	pq = pq.Returning("id")
 	sql, args, err := pq.Build()
 	wantSQL := "INSERT INTO \"users\" (\"name\", \"data\") VALUES ($1, $2) RETURNING id"
@@ -128,7 +130,7 @@ func TestPostgresInsertBuilder_PGJSON(t *testing.T) {
 	if len(args) != 2 {
 		t.Fatalf("expected 2 args, got %d", len(args))
 	}
-	jsonArg, ok := args[1].(PGJSON)
+	jsonArg, ok := args[1].(pgtypes.PGJSON)
 	if !ok {
 		t.Fatalf("expected PGJSON for arg, got %T", args[1])
 	}
@@ -148,7 +150,7 @@ func TestPostgresInsertBuilder_PGJSON(t *testing.T) {
 func TestPostgresInsertBuilder_PGArray(t *testing.T) {
 	pq := NewPostgresInsert("users")
 	arrVal := []string{"foo", "bar"}
-	pq.InsertBuilder = pq.InsertBuilder.Columns("tags").Values(PGArray{V: arrVal})
+	pq.InsertBuilder = pq.InsertBuilder.Columns("tags").Values(pgtypes.PGArray{V: arrVal})
 	pq = pq.Returning("id")
 	sql, args, err := pq.Build()
 	wantSQL := "INSERT INTO \"users\" (\"tags\") VALUES ($1) RETURNING id"
@@ -161,7 +163,7 @@ func TestPostgresInsertBuilder_PGArray(t *testing.T) {
 	if len(args) != 1 {
 		t.Fatalf("expected 1 arg, got %d", len(args))
 	}
-	pgArr, ok := args[0].(PGArray)
+	pgArr, ok := args[0].(pgtypes.PGArray)
 	if !ok {
 		t.Fatalf("expected PGArray for arg, got %T", args[0])
 	}

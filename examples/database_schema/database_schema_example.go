@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/sprylic/sqltk"
 	"github.com/sprylic/sqltk/ddl"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 func main() {
 	fmt.Println("=== Database and Schema DDL Examples ===")
 
 	// Set default dialect to MySQL
-	sqltk.SetDialect(sqltk.MySQL())
+	sqldialect.SetDialect(sqldialect.MySQL())
 
 	// Example 1: Create Database
 	fmt.Println("1. CREATE DATABASE Examples:")
@@ -70,7 +70,7 @@ func main() {
 	fmt.Println("\n3. CREATE SCHEMA Examples (PostgreSQL):")
 
 	// Set dialect to PostgreSQL
-	sqltk.SetDialect(sqltk.Postgres())
+	sqldialect.SetDialect(sqldialect.Postgres())
 
 	// Basic schema creation
 	createSchema := ddl.CreateSchema("myapp_schema")
@@ -135,7 +135,7 @@ func main() {
 	fmt.Println("\n5. Complete Database Setup Workflow:")
 
 	// Switch back to MySQL for the workflow
-	sqltk.SetDialect(sqltk.MySQL())
+	sqldialect.SetDialect(sqldialect.MySQL())
 
 	// Step 1: Create database
 	workflowDB := ddl.CreateDatabase("production_db").

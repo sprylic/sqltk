@@ -3,6 +3,9 @@ package sqltk
 import (
 	"errors"
 	"strings"
+
+	"github.com/sprylic/sqltk/sqldebug"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // InsertBuilder builds SQL INSERT queries.
@@ -11,7 +14,7 @@ type InsertBuilder struct {
 	columns []string
 	values  [][]interface{}
 	err     error
-	dialect Dialect // per-builder dialect, if set
+	dialect sqldialect.Dialect // per-builder dialect, if set
 }
 
 // Insert creates a new InsertBuilder for the given table.
@@ -42,7 +45,7 @@ func (b *InsertBuilder) Values(vals ...interface{}) *InsertBuilder {
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *InsertBuilder) WithDialect(d Dialect) *InsertBuilder {
+func (b *InsertBuilder) WithDialect(d sqldialect.Dialect) *InsertBuilder {
 	b.dialect = d
 	return b
 }
@@ -64,7 +67,7 @@ func (b *InsertBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = GetDialect()
+		dialect = sqldialect.GetDialect()
 	}
 	placeholderIdx := 1
 
@@ -109,7 +112,7 @@ type PostgresInsertBuilder struct {
 
 // NewPostgresInsert creates a new PostgresInsertBuilder for the given table.
 func NewPostgresInsert(table string) *PostgresInsertBuilder {
-	return &PostgresInsertBuilder{InsertBuilder: Insert(table).WithDialect(Postgres())}
+	return &PostgresInsertBuilder{InsertBuilder: Insert(table).WithDialect(sqldialect.Postgres())}
 }
 
 // Returning adds a RETURNING clause (Postgres only).
@@ -138,5 +141,5 @@ func (b *PostgresInsertBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *InsertBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

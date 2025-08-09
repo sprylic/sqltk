@@ -3,9 +3,9 @@ package ddl
 import (
 	"errors"
 	"fmt"
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 	"strings"
-
-	"github.com/sprylic/sqltk/shared"
 )
 
 // ColumnDef represents a column definition in a CREATE TABLE statement.
@@ -61,7 +61,7 @@ type TableOption struct {
 }
 
 // buildColumnSQL builds the SQL for a column definition.
-func (c *ColumnDef) buildSQL(dialect shared.Dialect) (string, error) {
+func (c *ColumnDef) buildSQL(dialect sqldialect.Dialect) (string, error) {
 	if c.Name == "" {
 		return "", errors.New("column name is required")
 	}
@@ -111,7 +111,7 @@ func (c *ColumnDef) buildSQL(dialect shared.Dialect) (string, error) {
 
 	// Auto increment
 	if c.AutoIncrement {
-		if dialect == shared.Postgres() {
+		if dialect == sqldialect.Postgres() {
 			// For Postgres, change the type to SERIAL based on the original type
 			parts = parts[:1] // Keep only the quoted column name
 			switch strings.ToUpper(c.Type) {
@@ -138,7 +138,7 @@ func (c *ColumnDef) buildSQL(dialect shared.Dialect) (string, error) {
 
 	// ON UPDATE handling
 	if c.OnUpdate != "" {
-		if dialect == shared.Postgres() {
+		if dialect == sqldialect.Postgres() {
 			// For PostgreSQL, we'll need to create a trigger to handle ON UPDATE
 			// This will be handled in the CreateTableBuilder to generate the trigger
 			// For now, we don't add ON UPDATE to the column definition for PostgreSQL
@@ -152,9 +152,9 @@ func (c *ColumnDef) buildSQL(dialect shared.Dialect) (string, error) {
 }
 
 // formatDefaultValue formats a default value for SQL.
-func formatDefaultValue(value interface{}, dialect shared.Dialect) string {
+func formatDefaultValue(value interface{}, dialect sqldialect.Dialect) string {
 	switch v := value.(type) {
-	case shared.Raw:
+	case raw.Raw:
 		// Raw SQL - include directly without quotes
 		return string(v)
 	case string:
@@ -169,7 +169,7 @@ func formatDefaultValue(value interface{}, dialect shared.Dialect) string {
 }
 
 // buildConstraintSQL builds the SQL for a constraint.
-func (c *Constraint) buildSQL(dialect shared.Dialect) (string, error) {
+func (c *Constraint) buildSQL(dialect sqldialect.Dialect) (string, error) {
 	var parts []string
 
 	switch c.Type {
@@ -252,7 +252,7 @@ func (c *Constraint) buildSQL(dialect shared.Dialect) (string, error) {
 }
 
 // buildIndexSQL builds the SQL for an index definition.
-func buildIndexSQL(dialect shared.Dialect, name string, columns []string) (string, error) {
+func buildIndexSQL(dialect sqldialect.Dialect, name string, columns []string) (string, error) {
 	if name == "" {
 		return "", errors.New("index name is required")
 	}

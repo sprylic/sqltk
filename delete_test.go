@@ -1,12 +1,14 @@
 package sqltk
 
 import (
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 	"reflect"
 	"testing"
 )
 
 func init() {
-	SetDialect(NoQuoteIdent())
+	sqldialect.SetDialect(sqldialect.NoQuoteIdent())
 }
 
 func TestDeleteBuilder(t *testing.T) {
@@ -27,7 +29,7 @@ func TestDeleteBuilder(t *testing.T) {
 	})
 
 	t.Run("delete with raw where", func(t *testing.T) {
-		q := Delete("users").Where(AsCondition(Raw("id = 1")))
+		q := Delete("users").Where(raw.Cond("id = 1"))
 		sql, args, err := q.Build()
 		wantSQL := "DELETE FROM users WHERE id = 1"
 		if err != nil {

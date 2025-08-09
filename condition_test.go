@@ -1,12 +1,14 @@
 package sqltk
 
 import (
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 	"reflect"
 	"testing"
 )
 
 func init() {
-	SetDialect(NoQuoteIdent())
+	sqldialect.SetDialect(sqldialect.NoQuoteIdent())
 }
 
 func TestConditionBuilder_Basic(t *testing.T) {
@@ -329,7 +331,7 @@ func TestConditionBuilder_Exists(t *testing.T) {
 	})
 
 	t.Run("exists raw", func(t *testing.T) {
-		cond := NewCond().Exists(Raw("SELECT 1 FROM orders WHERE user_id = 1"))
+		cond := NewCond().Exists(raw.Raw("SELECT 1 FROM orders WHERE user_id = 1"))
 		sql, args, err := cond.Build()
 		wantSQL := "EXISTS (SELECT 1 FROM orders WHERE user_id = 1)"
 		if err != nil {
@@ -489,7 +491,7 @@ func TestConditionBuilder_Integration(t *testing.T) {
 
 func TestConditionBuilder_Dialect(t *testing.T) {
 	t.Run("with mysql dialect", func(t *testing.T) {
-		cond := NewCond().WithDialect(MySQL()).Equal("user.name", "john")
+		cond := NewCond().WithDialect(sqldialect.MySQL()).Equal("user.name", "john")
 		sql, args, err := cond.Build()
 		wantSQL := "`user`.`name` = ?"
 		wantArgs := []interface{}{"john"}
@@ -505,7 +507,7 @@ func TestConditionBuilder_Dialect(t *testing.T) {
 	})
 
 	t.Run("with postgres dialect", func(t *testing.T) {
-		cond := NewCond().WithDialect(Postgres()).Equal("user.name", "john")
+		cond := NewCond().WithDialect(sqldialect.Postgres()).Equal("user.name", "john")
 		sql, args, err := cond.Build()
 		wantSQL := "\"user\".\"name\" = ?"
 		wantArgs := []interface{}{"john"}
@@ -550,7 +552,7 @@ func TestConditionInterface(t *testing.T) {
 	})
 
 	t.Run("raw condition", func(t *testing.T) {
-		cond := NewRawCondition(Raw("id = 1"))
+		cond := raw.Cond("id = 1")
 		sql, args, err := cond.BuildCondition()
 		wantSQL := "id = 1"
 		if err != nil {
@@ -600,7 +602,7 @@ func TestTypeSafeWhere(t *testing.T) {
 	})
 
 	t.Run("where with raw condition", func(t *testing.T) {
-		cond := NewRawCondition(Raw("id = 1"))
+		cond := raw.Cond("id = 1")
 		q := Select("id").From("users").Where(cond)
 		sql, args, err := q.Build()
 		wantSQL := "SELECT id FROM users WHERE id = 1"
@@ -633,7 +635,7 @@ func TestTypeSafeWhere(t *testing.T) {
 	})
 
 	t.Run("raw where now requires AsCondition", func(t *testing.T) {
-		cond := AsCondition(Raw("id = 1"))
+		cond := raw.Cond("id = 1")
 		q := Select("id").From("users").Where(cond)
 		sql, args, err := q.Build()
 		wantSQL := "SELECT id FROM users WHERE id = 1"

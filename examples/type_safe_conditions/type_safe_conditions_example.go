@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/sprylic/sqltk"
+	"github.com/sprylic/sqltk/raw"
 )
 
 func main() {
@@ -20,7 +21,7 @@ func main() {
 
 	// Example 2: Type-safe raw condition
 	fmt.Println("2. Type-safe raw condition:")
-	rawCond := sqltk.NewRawCondition(sqltk.Raw("id = 1"))
+	rawCond := raw.Cond("id = 1")
 	q2 := sqltk.Select("id", "name").From("users").Where(rawCond)
 	sql2, args2, _ := q2.Build()
 	fmt.Printf("SQL: %s\n", sql2)
@@ -50,9 +51,9 @@ func main() {
 	fmt.Printf("UPDATE SQL: %s\n", updateSQL)
 	fmt.Printf("UPDATE Args: %v\n\n", updateArgs)
 
-	// Example 5: Raw conditions now require AsCondition wrapper
-	fmt.Println("5. Raw conditions now require AsCondition wrapper:")
-	rawCond2 := sqltk.AsCondition(sqltk.Raw("id = 1"))
+	// Example 5: Raw conditions require raw Cond
+	fmt.Println("5. Raw conditions require raw Cond:")
+	rawCond2 := raw.Cond("id = 1")
 	q5 := sqltk.Select("id").From("users").Where(rawCond2)
 	sql5, args5, _ := q5.Build()
 	fmt.Printf("SQL: %s\n", sql5)

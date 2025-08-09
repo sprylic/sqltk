@@ -2,9 +2,10 @@ package ddl
 
 import (
 	"errors"
+	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // CreateSchemaBuilder builds CREATE SCHEMA statements.
@@ -14,7 +15,7 @@ type CreateSchemaBuilder struct {
 	authorization string
 	options       []SchemaOption
 	err           error
-	dialect       shared.Dialect
+	dialect       sqldialect.Dialect
 }
 
 // SchemaOption represents a schema option.
@@ -59,7 +60,7 @@ func (b *CreateSchemaBuilder) Option(name, value string) *CreateSchemaBuilder {
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *CreateSchemaBuilder) WithDialect(d shared.Dialect) *CreateSchemaBuilder {
+func (b *CreateSchemaBuilder) WithDialect(d sqldialect.Dialect) *CreateSchemaBuilder {
 	b.dialect = d
 	return b
 }
@@ -75,7 +76,7 @@ func (b *CreateSchemaBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = shared.GetDialect()
+		dialect = sqldialect.GetDialect()
 	}
 
 	var parts []string
@@ -108,5 +109,5 @@ func (b *CreateSchemaBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *CreateSchemaBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

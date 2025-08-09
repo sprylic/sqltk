@@ -2,9 +2,10 @@ package ddl
 
 import (
 	"errors"
+	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 // DropDatabaseBuilder builds DROP DATABASE statements.
@@ -13,7 +14,7 @@ type DropDatabaseBuilder struct {
 	ifExists bool
 	cascade  bool
 	err      error
-	dialect  shared.Dialect
+	dialect  sqldialect.Dialect
 }
 
 // DropDatabase creates a new DropDatabaseBuilder for the given database name.
@@ -43,7 +44,7 @@ func (b *DropDatabaseBuilder) Cascade() *DropDatabaseBuilder {
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *DropDatabaseBuilder) WithDialect(d shared.Dialect) *DropDatabaseBuilder {
+func (b *DropDatabaseBuilder) WithDialect(d sqldialect.Dialect) *DropDatabaseBuilder {
 	b.dialect = d
 	return b
 }
@@ -59,7 +60,7 @@ func (b *DropDatabaseBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = shared.GetDialect()
+		dialect = sqldialect.GetDialect()
 	}
 
 	var parts []string
@@ -72,7 +73,7 @@ func (b *DropDatabaseBuilder) Build() (string, []interface{}, error) {
 	parts = append(parts, dialect.QuoteIdent(b.name))
 
 	// Add CASCADE for PostgreSQL
-	if b.cascade && dialect == shared.Postgres() {
+	if b.cascade && dialect == sqldialect.Postgres() {
 		parts = append(parts, "CASCADE")
 	}
 
@@ -84,5 +85,5 @@ func (b *DropDatabaseBuilder) Build() (string, []interface{}, error) {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *DropDatabaseBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return shared.InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

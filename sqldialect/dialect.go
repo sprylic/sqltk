@@ -1,8 +1,6 @@
-package shared
+package sqldialect
 
 import (
-	"database/sql/driver"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -70,92 +68,4 @@ func GetDialect() Dialect {
 	dialectMu.RLock()
 	defer dialectMu.RUnlock()
 	return globalDialect
-}
-
-// Raw represents raw SQL that should be included directly without quoting.
-type Raw string
-
-// BuildCondition implements the Condition interface.
-func (r Raw) BuildCondition() (string, []interface{}, error) {
-	return string(r), nil, nil
-}
-
-// PGJSON wraps a value for JSON encoding in Postgres queries.
-type PGJSON struct {
-	V interface{}
-}
-
-// Value implements driver.Valuer for PGJSON.
-func (j PGJSON) Value() (driver.Value, error) {
-	if j.V == nil {
-		return nil, nil
-	}
-	return json.Marshal(j.V)
-}
-
-// PGArray wraps a value for Postgres array encoding in queries.
-type PGArray struct {
-	V interface{}
-}
-
-// Value implements driver.Valuer for PGArray.
-func (a PGArray) Value() (driver.Value, error) {
-	if a.V == nil {
-		return nil, nil
-	}
-
-	// Handle string slices specifically for PostgreSQL text arrays
-	if strSlice, ok := a.V.([]string); ok {
-		// Convert []string to PostgreSQL array format: {"value1","value2"}
-		// Escape quotes in strings and wrap in curly braces
-		escaped := make([]string, len(strSlice))
-		for i, s := range strSlice {
-			// Escape double quotes by doubling them
-			escaped[i] = `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
-		}
-		result := "{" + strings.Join(escaped, ",") + "}"
-		return result, nil
-	}
-
-	// For other types, let the driver handle it
-	return a.V, nil
-}
-
-type UnsafeSqlString string
-
-func (s UnsafeSqlString) GetUnsafeString() string {
-	return string(s)
-}
-
-// InterpolateSQL interpolates arguments into a SQL query for debugging/logging only.
-// DO NOT use the result for execution (not safe against SQL injection).
-func InterpolateSQL(query string, args []interface{}) UnsafeSqlString {
-	if len(args) == 0 {
-		return UnsafeSqlString(query)
-	}
-
-	// Simple interpolation - replace ? with values
-	result := query
-	argIndex := 0
-
-	for i := 0; i < len(result) && argIndex < len(args); i++ {
-		if result[i] == '?' {
-			arg := args[argIndex]
-			var argStr string
-
-			switch v := arg.(type) {
-			case string:
-				argStr = "'" + strings.ReplaceAll(v, "'", "''") + "'"
-			case nil:
-				argStr = "NULL"
-			default:
-				argStr = fmt.Sprintf("%v", v)
-			}
-
-			result = result[:i] + argStr + result[i+1:]
-			argIndex++
-		}
-	}
-
-	return UnsafeSqlString(result)
 }

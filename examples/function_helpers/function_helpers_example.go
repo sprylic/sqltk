@@ -6,11 +6,13 @@ import (
 	"github.com/sprylic/sqltk"
 	"github.com/sprylic/sqltk/mysqlfunc"
 	"github.com/sprylic/sqltk/pgfunc"
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 func main() {
 	// Set dialect to not quote identifiers for cleaner output
-	sqltk.SetDialect(sqltk.NoQuoteIdent())
+	sqldialect.SetDialect(sqldialect.NoQuoteIdent())
 
 	fmt.Println("=== MySQL Functions Example ===")
 
@@ -95,13 +97,13 @@ func main() {
 
 	// Using functions in WHERE clauses
 	mysqlWhereQuery := sqltk.Select("id", "name").From("users").Where(
-		sqltk.AsCondition(sqltk.Raw("created_at > " + string(mysqlfunc.CurrentTimestamp()))),
+		raw.Cond("created_at > " + string(mysqlfunc.CurrentTimestamp())),
 	)
 	mysqlWhereSQL, mysqlWhereArgs, _ := mysqlWhereQuery.Build()
 	fmt.Printf("MySQL WHERE with function: %s\n", mysqlWhereSQL)
 
 	pgWhereQuery := sqltk.Select("id", "name").From("users").Where(
-		sqltk.AsCondition(sqltk.Raw("created_at > " + string(pgfunc.Now()))),
+		raw.Cond("created_at > " + string(pgfunc.Now())),
 	)
 	pgWhereSQL, pgWhereArgs, _ := pgWhereQuery.Build()
 	fmt.Printf("PostgreSQL WHERE with function: %s\n", pgWhereSQL)

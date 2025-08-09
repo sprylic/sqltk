@@ -3,8 +3,11 @@ package sqltk
 import (
 	"errors"
 	"fmt"
+	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
 
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 	"github.com/sprylic/sqltk/sqlfunc"
 )
 
@@ -26,7 +29,7 @@ type SelectBuilder struct {
 	limit       int
 	offsetSet   bool
 	offset      int
-	dialect     Dialect // per-builder dialect, if set
+	dialect     sqldialect.Dialect // per-builder dialect, if set
 }
 
 // Distinct sets the DISTINCT flag for the SELECT query.
@@ -156,7 +159,7 @@ func (b *SelectBuilder) WhereNotExists(subquery interface{}) *SelectBuilder {
 
 // WhereColsEqual adds a WHERE clause for column equality (column1 = column2).
 func (b *SelectBuilder) WhereColsEqual(column1, column2 string) *SelectBuilder {
-	b.Where(Raw(column1 + " = " + column2))
+	b.Where(raw.Raw(column1 + " = " + column2))
 	return b
 }
 
@@ -170,7 +173,7 @@ func (b *SelectBuilder) GroupBy(expr ...interface{}) *SelectBuilder {
 		switch c := e.(type) {
 		case sqlfunc.SqlFunc:
 			b.groupByRaw = append(b.groupByRaw, string(c))
-		case Raw:
+		case raw.Raw:
 			b.groupByRaw = append(b.groupByRaw, string(c))
 		case string:
 			b.groupBy = append(b.groupBy, c)
@@ -207,7 +210,7 @@ func (b *SelectBuilder) OrderBy(expr interface{}) *SelectBuilder {
 	switch c := expr.(type) {
 	case sqlfunc.SqlFunc:
 		b.orderByRaw = append(b.orderByRaw, string(c))
-	case Raw:
+	case raw.Raw:
 		b.orderByRaw = append(b.orderByRaw, string(c))
 	case string:
 		b.orderBy = append(b.orderBy, c)
@@ -295,13 +298,13 @@ func (jb *JoinBuilder) On(left, right string) *SelectBuilder {
 	clause := jb.joinType + " "
 	dialect := jb.parent.dialect
 	if dialect == nil {
-		dialect = GetDialect()
+		dialect = sqldialect.GetDialect()
 	}
 
 	switch t := jb.joinTable.(type) {
 	case string:
 		clause += dialect.QuoteIdent(t)
-	case Raw:
+	case raw.Raw:
 		clause += string(t)
 	case *SelectBuilder:
 		subSQL, subArgs, subErr := t.Build()
@@ -325,7 +328,7 @@ func (jb *JoinBuilder) On(left, right string) *SelectBuilder {
 			jb.parent.whereClause.whereArgs = append(jb.parent.whereClause.whereArgs, subArgs...)
 		case string:
 			clause += dialect.QuoteIdent(expr) + " AS " + t.Alias
-		case Raw:
+		case raw.Raw:
 			clause += string(expr) + " AS " + t.Alias
 		default:
 			jb.parent.whereClause.err = fmt.Errorf("join alias: expr must be string, Raw, or *SelectBuilder (got %T)", expr)
@@ -367,7 +370,7 @@ func Alias(expr interface{}, alias string) AliasExpr {
 }
 
 // WithDialect sets the dialect for this builder instance.
-func (b *SelectBuilder) WithDialect(d Dialect) *SelectBuilder {
+func (b *SelectBuilder) WithDialect(d sqldialect.Dialect) *SelectBuilder {
 	b.dialect = d
 	return b
 }
@@ -386,7 +389,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 
 	dialect := b.dialect
 	if dialect == nil {
-		dialect = GetDialect()
+		dialect = sqldialect.GetDialect()
 	}
 	placeholderIdx := 1
 
@@ -439,7 +442,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 				} else {
 					sb.WriteString(dialect.QuoteIdent(c))
 				}
-			case Raw:
+			case raw.Raw:
 				sb.WriteString(string(c))
 			case sqlfunc.SqlFunc:
 				sb.WriteString(string(c))
@@ -479,7 +482,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 					}
 					sb.WriteString(" AS ")
 					sb.WriteString(c.Alias)
-				case Raw:
+				case raw.Raw:
 					sb.WriteString(string(expr))
 					sb.WriteString(" AS ")
 					sb.WriteString(c.Alias)
@@ -501,7 +504,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 		sb.WriteString(dialect.QuoteIdent(t))
 	case sqlfunc.SqlFunc:
 		sb.WriteString(string(t))
-	case Raw:
+	case raw.Raw:
 		sb.WriteString(string(t))
 	case *SelectBuilder:
 		subSQL, subArgs, subErr := t.Build()
@@ -528,7 +531,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 			sb.WriteString(dialect.QuoteIdent(expr))
 			sb.WriteString(" AS ")
 			sb.WriteString(t.Alias)
-		case Raw:
+		case raw.Raw:
 			sb.WriteString(string(expr))
 			sb.WriteString(" AS ")
 			sb.WriteString(t.Alias)
@@ -687,8 +690,8 @@ func (b *SelectBuilder) GetColumns() []string {
 		switch col.(type) {
 		case string:
 			cols = append(cols, col.(string))
-		case Raw:
-			cols = append(cols, string(col.(Raw)))
+		case raw.Raw:
+			cols = append(cols, string(col.(raw.Raw)))
 		case sqlfunc.SqlFunc:
 			cols = append(cols, string(col.(sqlfunc.SqlFunc)))
 		case *SelectBuilder:
@@ -765,5 +768,5 @@ func (b *SelectBuilder) Compose(builders ...*SelectBuilder) *SelectBuilder {
 // DO NOT use the result for execution (not safe against SQL injection).
 func (b *SelectBuilder) DebugSQL() string {
 	sql, args, _ := b.Build()
-	return InterpolateSQL(sql, args).GetUnsafeString()
+	return sqldebug.InterpolateSQL(sql, args).GetUnsafeString()
 }

@@ -3,7 +3,7 @@ package ddl
 import (
 	"testing"
 
-	"github.com/sprylic/sqltk/shared"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 func TestCreateSchema(t *testing.T) {
@@ -52,7 +52,7 @@ func TestCreateSchema(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.MySQL())
+			tt.builder.WithDialect(sqldialect.MySQL())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -109,7 +109,7 @@ func TestCreateSchemaPostgres(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.Postgres())
+			tt.builder.WithDialect(sqldialect.Postgres())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -161,7 +161,7 @@ func TestCreateSchemaNoQuoteIdent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.builder.WithDialect(shared.NoQuoteIdent())
+			tt.builder.WithDialect(sqldialect.NoQuoteIdent())
 			sql, args, err := tt.builder.Build()
 
 			if tt.wantErr {
@@ -189,7 +189,7 @@ func TestCreateSchemaNoQuoteIdent(t *testing.T) {
 
 func TestCreateSchemaDebugSQL(t *testing.T) {
 	builder := CreateSchema("testschema").IfNotExists().Authorization("testuser")
-	builder.WithDialect(shared.MySQL())
+	builder.WithDialect(sqldialect.MySQL())
 
 	debugSQL := builder.DebugSQL()
 	expected := "CREATE SCHEMA IF NOT EXISTS `testschema` AUTHORIZATION `testuser`"
