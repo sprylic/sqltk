@@ -3,8 +3,9 @@ package ddl
 import (
 	"errors"
 	"fmt"
-	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
+
+	"github.com/sprylic/sqltk/sqldebug"
 
 	"github.com/sprylic/sqltk/sqldialect"
 	"github.com/sprylic/sqltk/sqlfunc"
@@ -58,6 +59,39 @@ func (cb *ColumnBuilder) BuildDef() (ColumnDef, error) {
 		return ColumnDef{}, errors.New("column type is required")
 	}
 	return cb.def, nil
+}
+
+func (b *CreateTableBuilder) GetTable() string {
+	return b.tableName
+}
+
+func (b *CreateTableBuilder) GetColumns() []ColumnDef {
+	return b.columns
+}
+
+func (b *CreateTableBuilder) GetConstraints() []Constraint {
+	return b.constraints
+}
+
+func (b *CreateTableBuilder) GetPrimaryKeys() []string {
+	var pkCols []string
+	for _, constraint := range b.constraints {
+		if constraint.Type == PrimaryKeyType {
+			pkCols = constraint.Columns
+			break
+		}
+	}
+	return pkCols
+}
+
+func (b *CreateTableBuilder) GetRelations() []Constraint {
+	relations := make([]Constraint, 0)
+	for _, constraint := range b.constraints {
+		if constraint.Type == ForeignKeyType {
+			relations = append(relations, constraint)
+		}
+	}
+	return relations
 }
 
 // AddColumn adds a column from a ColumnBuilder.
