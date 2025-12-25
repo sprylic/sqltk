@@ -1,4 +1,4 @@
-# Spylic SQL Tool Kit
+# Sprylic - SQL Tool Kit
 
 [![CI](https://github.com/sprylic/sqltk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sprylic/sqltk/actions/workflows/ci.yml)
 
