@@ -1,8 +1,9 @@
 package sqltk
 
 import (
-	"github.com/sprylic/sqltk/sqldialect"
 	"testing"
+
+	"github.com/sprylic/sqltk/sqldialect"
 
 	"github.com/sprylic/sqltk/ddl"
 )

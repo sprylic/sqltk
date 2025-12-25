@@ -3,9 +3,10 @@ package ddl
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/sprylic/sqltk/raw"
 	"github.com/sprylic/sqltk/sqldialect"
-	"strings"
 )
 
 // ColumnDef represents a column definition in a CREATE TABLE statement.

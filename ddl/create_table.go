@@ -61,29 +61,33 @@ func (cb *ColumnBuilder) BuildDef() (ColumnDef, error) {
 	return cb.def, nil
 }
 
+// GetTable returns the name of the table
 func (b *CreateTableBuilder) GetTable() string {
 	return b.tableName
 }
 
+// GetColumns returns the table's column definitions
 func (b *CreateTableBuilder) GetColumns() []ColumnDef {
 	return b.columns
 }
 
+// GetConstraints returns the table's constraints
 func (b *CreateTableBuilder) GetConstraints() []Constraint {
 	return b.constraints
 }
 
+// GetPrimaryKeys returns the table's primary key columns
 func (b *CreateTableBuilder) GetPrimaryKeys() []string {
 	var pkCols []string
 	for _, constraint := range b.constraints {
 		if constraint.Type == PrimaryKeyType {
-			pkCols = constraint.Columns
-			break
+			pkCols = append(pkCols, constraint.Columns...)
 		}
 	}
 	return pkCols
 }
 
+// GetRelations returns the table's foreign key constraints'
 func (b *CreateTableBuilder) GetRelations() []Constraint {
 	relations := make([]Constraint, 0)
 	for _, constraint := range b.constraints {

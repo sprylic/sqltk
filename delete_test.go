@@ -1,10 +1,11 @@
 package sqltk
 
 import (
-	"github.com/sprylic/sqltk/raw"
-	"github.com/sprylic/sqltk/sqldialect"
 	"reflect"
 	"testing"
+
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 func init() {

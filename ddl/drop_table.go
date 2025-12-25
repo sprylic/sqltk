@@ -2,8 +2,9 @@ package ddl
 
 import (
 	"errors"
-	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
+
+	"github.com/sprylic/sqltk/sqldebug"
 
 	"github.com/sprylic/sqltk/sqldialect"
 )

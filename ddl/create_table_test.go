@@ -1,10 +1,11 @@
 package ddl
 
 import (
-	"github.com/sprylic/sqltk/raw"
-	"github.com/sprylic/sqltk/sqldialect"
 	"strings"
 	"testing"
+
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 
 	"github.com/sprylic/sqltk/mysqlfunc"
 )

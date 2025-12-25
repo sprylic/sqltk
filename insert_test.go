@@ -2,10 +2,11 @@ package sqltk
 
 import (
 	"encoding/json"
-	"github.com/sprylic/sqltk/pgtypes"
-	"github.com/sprylic/sqltk/sqldialect"
 	"reflect"
 	"testing"
+
+	"github.com/sprylic/sqltk/pgtypes"
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 func init() {

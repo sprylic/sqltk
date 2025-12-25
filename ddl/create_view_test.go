@@ -1,9 +1,10 @@
 package ddl
 
 import (
+	"testing"
+
 	"github.com/sprylic/sqltk/raw"
 	"github.com/sprylic/sqltk/sqldialect"
-	"testing"
 )
 
 func init() {

@@ -1,11 +1,12 @@
 package sqltk
 
 import (
-	"github.com/sprylic/sqltk/raw"
-	"github.com/sprylic/sqltk/sqldialect"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/sprylic/sqltk/raw"
+	"github.com/sprylic/sqltk/sqldialect"
 
 	"github.com/sprylic/sqltk/mysqlfunc"
 )

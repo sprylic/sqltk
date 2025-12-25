@@ -3,8 +3,9 @@ package sqltk
 import (
 	"errors"
 	"fmt"
-	"github.com/sprylic/sqltk/sqldebug"
 	"strings"
+
+	"github.com/sprylic/sqltk/sqldebug"
 
 	"github.com/sprylic/sqltk/raw"
 	"github.com/sprylic/sqltk/sqldialect"

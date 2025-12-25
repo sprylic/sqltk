@@ -1,7 +1,6 @@
 package raw
 
 // Raw represents raw SQL that should be included directly without quoting.
-// todo refactor for specific raw types. Like raw.Col
 type Raw string
 
 // BuildCondition implements the Condition interface.

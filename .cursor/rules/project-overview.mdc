@@ -1,4 +1,4 @@
-# Go SQL Tool Kit - SQL Query Builder Project Overview
+# Sprylic SQL Tool Kit - SQL Query Builder Project Overview
 
 This is a Go SQL query builder library that provides type-safe, fluent APIs for building SQL queries and DDL operations. The project is currently in active development.
 
@@ -9,7 +9,7 @@ All builders follow a fluent API pattern where methods return the builder instan
 ```go
 q := sqltk.Select("id", "name").
     From("users").
-    Where(sqltk.NewStringCondition("active = ?", true)).
+    WhereEqual("active", true).
     OrderBy("name")
 ```
 

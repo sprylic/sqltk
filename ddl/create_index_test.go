@@ -1,8 +1,9 @@
 package ddl
 
 import (
-	"github.com/sprylic/sqltk/sqldialect"
 	"testing"
+
+	"github.com/sprylic/sqltk/sqldialect"
 )
 
 func TestCreateIndexBuilder(t *testing.T) {
