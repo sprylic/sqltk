@@ -47,7 +47,7 @@ var (
 	globalDialect Dialect = &mySQLDialectInstance
 )
 
-// NoQuoteIdent returns a SQL dialect with no identifier quoting (clean SQL).
+// NoQuoteIdent returns a SQL dialect with no identifier quoting.
 func NoQuoteIdent() Dialect { return &standardDialectInstance }
 
 // MySQL returns the MySQL SQL dialect (default).

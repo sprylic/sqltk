@@ -10,6 +10,13 @@ This project is still in development and is not yet ready for production use.
 A considerable amount of the code was generated using AI. Notably, almost all the tests. 
 I tried to keep a close eye on any generated code, but there could still be some bugs or vulnerabilities.
 
+## Installation
+
+```bash
+go get github.com/sprylic/sqltk
+```
+
+
 ## Example Usage
 
 ### SELECT
@@ -57,7 +64,6 @@ cond := sqltk.NewStringCondition("active = ? AND age > ?", true, 18)
 q := sqltk.Select("id").From("users").Where(cond)
 
 // raw condition
-
 cond := raw.Cond("id = 1")
 q := sqltk.Select("id").From("users").Where(cond)
 
@@ -85,10 +91,16 @@ All condition types implement this interface:
 
 SELECT with conditions
 ```go
+package main
+
 cond := sqltk.NewCond().
     Equal("active", true).
-    And(sqltk.NewCond().GreaterThan("age", 18)).
-    And(sqltk.NewCond().In("status", "active", "pending"))
+    And(
+		sqltk.NewCond().GreaterThan("age", 18),
+    ).
+    And(
+		sqltk.NewCond().In("status", "active", "pending"),
+    )
 q := sqltk.Select("id", "name").From("users").Where(cond)
 sql, args, err := q.Build()
 // sql: "SELECT `id`, `name` FROM `users` WHERE active = ? AND age > ? AND status IN (?, ?)"
@@ -127,13 +139,13 @@ sql, args, err := q.Build()
 **Type Safety:**
 String conditions must use explicit wrappers to prevent SQL injection:
 ```go
-// ❌ This will cause an error
+// This will cause an error
 q := sqltk.Select("id").From("users").Where("active = ?", 1)
 
-// ✅ Use explicit wrapper for string conditions
+// Use explicit wrapper for string conditions
 q := sqltk.Select("id").From("users").Where(sqltk.NewStringCondition("active = ?", 1))
 
-// ✅ Raw conditions work directly (implements Condition interface)
+// Raw conditions work directly (implements Condition interface)
 import "github.com/sprylic/sqltk/raw"
 
 q := sqltk.Select("id").From("users").Where(raw.Cond("active = 1"))
@@ -183,6 +195,16 @@ sql, args, err := builder.Build()
 
 ### Warning:
 Using the global dialect can be problematic when using different dialects concurrently. If you need to support a different dialect, use WithDialect on the builder instead.
+
+**Custom Dialects:**
+You can use a custom dialect by implementing the `Dialect` interface.
+```go
+type Dialect interface {
+    Placeholder(n int) string
+    QuoteIdent(ident string) string
+    QuoteString(s string) string
+}
+```
 
 ## DDL Operations
 
@@ -252,7 +274,7 @@ createTableWithCompositePK := ddl.CreateTable("user_roles").
 sql, _, err := createTableWithCompositePK.Build()
 // sql: "CREATE TABLE `user_roles` (`user_id` INT NOT NULL, `role_id` INT NOT NULL, PRIMARY KEY (`user_id`, `role_id`))"
 
-// Alternative: specify primary key separately (legacy method)
+// Alternative: specify primary key separately
 createTableLegacy := ddl.CreateTable("users").
     AddColumns(
         ddl.Column("id").Type("INT").AutoIncrement().NotNull(),
@@ -320,7 +342,7 @@ sql, _, err := dropView.Build()
 
 ## Database Function Helpers
 
-Helper functions provided for common database operations, making it easier to write database-specific SQL without using raw strings.
+Helper functions are provided for common database operations, making it easier to write database-specific SQL without using raw strings.
 
 ### MySQL Functions
 
@@ -463,9 +485,3 @@ q := sqltk.Select("id", "name").From("users").Where(
 ## Examples
 
 See the `examples/` directory for more detailed examples:
-
-## Installation
-
-```bash
-go get github.com/sprylic/sqltk
-```
