@@ -1,7 +1,6 @@
 # Sprylic - SQL Tool Kit
 
-[![CI](https://github.com/sprylic/sqltk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sprylic/sqltk/actions/workflows/ci.yml)
-
+[![CI](https://github.com/sprylic/sqltk/actions/workflows/ci.yml/badge.svg)](https://github.com/sprylic/sqltk/actions/workflows/ci.yml)
 A SQL builder for Go with composable query building and DDL operations.
 
 ## Warning
